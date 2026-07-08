@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
   Plus, ClipboardList, Package, Upload, FileText, Trash2, Edit2, 
   Calendar, User, Check, ArrowRight, Download, ExternalLink, RefreshCw,
-  Lock, Unlock, ShieldAlert, AlertTriangle, Link
+  Lock, Unlock, ShieldAlert, AlertTriangle, Link, Beaker, Save
 } from 'lucide-react';
 import { dbService } from '../services/db';
 
@@ -19,7 +19,7 @@ export default function ProjectDetails({
   const [isMaterialModalOpen, setIsMaterialModalOpen] = useState(false);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [uploadingNoteFile, setUploadingNoteFile] = useState(false);
 
   // Estados de los Formularios
   const [materialForm, setMaterialForm] = useState({ name: '', quantity: 1, unit_price: '', requested_by: '' });
@@ -29,7 +29,7 @@ export default function ProjectDetails({
   const [editingTaskId, setEditingTaskId] = useState(null);
 
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
-  const [noteForm, setNoteForm] = useState({ title: '', content: '' });
+  const [noteForm, setNoteForm] = useState({ title: '', content: '', file_url: '' });
   const [editingNoteId, setEditingNoteId] = useState(null);
   const [selectedViewNote, setSelectedViewNote] = useState(null);
 
@@ -45,6 +45,267 @@ export default function ProjectDetails({
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [linkInput, setLinkInput] = useState('');
   const [editingLinkMaterialId, setEditingLinkMaterialId] = useState(null);
+
+  // --- ESTADOS Y ACCIONES PARA LA TABLA DE ENSAYOS ---
+  const [trialsData, setTrialsData] = useState(null);
+  const [trialsLoading, setTrialsLoading] = useState(true);
+  const [isSavingTrials, setIsSavingTrials] = useState(false);
+  const [selectedViewTrialRow, setSelectedViewTrialRow] = useState(null);
+
+  const loadTrials = async () => {
+    try {
+      setTrialsLoading(true);
+      const data = await dbService.getProjectTrials(project.id);
+      if (data) {
+        setTrialsData(data);
+      } else {
+        // Inicializar estructura por defecto si no existe
+        const defaultData = {
+          project_id: project.id,
+          columns: ["Método", "Espesor / Capas", "Peso (g/m²)", "Resistencia Impacto", "Estado Visual", "Confirmado Por"],
+          rows: ["Ensayo 1: Fibra + WBPU", "Ensayo 2: Papel Japón", "Ensayo 3: Masilla de Microesferas", "Ensayo 4: Doculam"],
+          cells: {}
+        };
+        setTrialsData(defaultData);
+      }
+    } catch (err) {
+      console.error("Error al cargar los ensayos:", err);
+    } finally {
+      setTrialsLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    if (activeTab === 'trials') {
+      loadTrials();
+    }
+  }, [activeTab, project.id]);
+
+  const handleCellChange = (rowIdx, colIdx, val) => {
+    setTrialsData(prev => {
+      if (!prev) return prev;
+      const key = `${rowIdx}_${colIdx}`;
+      // No permitir editar si está confirmado y no es admin
+      if (prev.cells[key]?.confirmed && !isAdmin) return prev;
+
+      return {
+        ...prev,
+        cells: {
+          ...prev.cells,
+          [key]: {
+            ...prev.cells[key],
+            value: val
+          }
+        }
+      };
+    });
+  };
+
+  const handleSaveDraft = async () => {
+    try {
+      setIsSavingTrials(true);
+      const saved = await dbService.saveProjectTrials(project.id, trialsData);
+      setTrialsData(saved);
+      alert('Progreso guardado correctamente (Borrador).');
+    } catch (err) {
+      alert('Error al guardar el borrador: ' + err.message);
+    } finally {
+      setIsSavingTrials(false);
+    }
+  };
+
+  const isRowFilled = (rowIdx) => {
+    if (!trialsData) return false;
+    return trialsData.columns.every((_, colIdx) => {
+      const cellVal = trialsData.cells[`${rowIdx}_${colIdx}`]?.value;
+      return cellVal !== undefined && cellVal.trim() !== '';
+    });
+  };
+
+  const handleConfirmRow = async (rowIdx) => {
+    if (!isRowFilled(rowIdx)) {
+      alert('Por favor, completa todos los campos de esta fila antes de confirmar.');
+      return;
+    }
+
+    if (!window.confirm(`¿Estás seguro de que deseas confirmar esta fila? Una vez confirmada, no podrás borrar ni editar estos campos.`)) {
+      return;
+    }
+
+    const updatedCells = { ...trialsData.cells };
+    trialsData.columns.forEach((_, colIdx) => {
+      const key = `${rowIdx}_${colIdx}`;
+      if (updatedCells[key]) {
+        updatedCells[key].confirmed = true;
+      } else {
+        updatedCells[key] = { value: '', confirmed: true };
+      }
+    });
+
+    const updatedData = {
+      ...trialsData,
+      cells: updatedCells
+    };
+
+    try {
+      setIsSavingTrials(true);
+      const saved = await dbService.saveProjectTrials(project.id, updatedData);
+      setTrialsData(saved);
+      alert('Fila de ensayos confirmada y bloqueada con éxito.');
+    } catch (err) {
+      alert('Error al confirmar la fila: ' + err.message);
+    } finally {
+      setIsSavingTrials(false);
+    }
+  };
+
+  const handleUnlockRow = async (rowIdx) => {
+    if (!window.confirm(`¿Deseas desbloquear esta fila para permitir que los usuarios invitados editen sus campos de nuevo?`)) {
+      return;
+    }
+
+    const updatedCells = { ...trialsData.cells };
+    trialsData.columns.forEach((_, colIdx) => {
+      const key = `${rowIdx}_${colIdx}`;
+      if (updatedCells[key]) {
+        updatedCells[key].confirmed = false;
+      }
+    });
+
+    const updatedData = {
+      ...trialsData,
+      cells: updatedCells
+    };
+
+    try {
+      setIsSavingTrials(true);
+      const saved = await dbService.saveProjectTrials(project.id, updatedData);
+      setTrialsData(saved);
+      alert('Fila desbloqueada con éxito.');
+    } catch (err) {
+      alert('Error al desbloquear la fila: ' + err.message);
+    } finally {
+      setIsSavingTrials(false);
+    }
+  };
+
+  const handleAddRow = () => {
+    const rowName = prompt('Ingresa el nombre de la nueva fila (ej. Ensayo 5):');
+    if (!rowName || rowName.trim() === '') return;
+
+    setTrialsData(prev => {
+      if (!prev) return prev;
+      const updatedRows = [...prev.rows, rowName.trim()];
+      const updatedData = { ...prev, rows: updatedRows };
+      dbService.saveProjectTrials(project.id, updatedData)
+        .then(saved => setTrialsData(saved))
+        .catch(err => alert('Error al guardar: ' + err.message));
+      return updatedData;
+    });
+  };
+
+  const handleAddColumn = () => {
+    const colName = prompt('Ingresa el nombre de la nueva columna (ej. Temperatura):');
+    if (!colName || colName.trim() === '') return;
+
+    setTrialsData(prev => {
+      if (!prev) return prev;
+      const updatedCols = [...prev.columns, colName.trim()];
+      const updatedData = { ...prev, columns: updatedCols };
+      dbService.saveProjectTrials(project.id, updatedData)
+        .then(saved => setTrialsData(saved))
+        .catch(err => alert('Error al guardar: ' + err.message));
+      return updatedData;
+    });
+  };
+
+  const handleRenameColumn = (colIdx) => {
+    const oldName = trialsData.columns[colIdx];
+    const newName = prompt(`Renombrar columna "${oldName}" a:`, oldName);
+    if (newName === null || newName.trim() === '' || newName === oldName) return;
+
+    setTrialsData(prev => {
+      if (!prev) return prev;
+      const updatedCols = [...prev.columns];
+      updatedCols[colIdx] = newName.trim();
+      const updatedData = { ...prev, columns: updatedCols };
+      dbService.saveProjectTrials(project.id, updatedData)
+        .then(saved => setTrialsData(saved))
+        .catch(err => alert('Error al guardar: ' + err.message));
+      return updatedData;
+    });
+  };
+
+  const handleRenameRow = (rowIdx) => {
+    const oldName = trialsData.rows[rowIdx];
+    const newName = prompt(`Renombrar fila "${oldName}" a:`, oldName);
+    if (newName === null || newName.trim() === '' || newName === oldName) return;
+
+    setTrialsData(prev => {
+      if (!prev) return prev;
+      const updatedRows = [...prev.rows];
+      updatedRows[rowIdx] = newName.trim();
+      const updatedData = { ...prev, rows: updatedRows };
+      dbService.saveProjectTrials(project.id, updatedData)
+        .then(saved => setTrialsData(saved))
+        .catch(err => alert('Error al guardar: ' + err.message));
+      return updatedData;
+    });
+  };
+
+  const handleDeleteColumn = (colIdx) => {
+    const colName = trialsData.columns[colIdx];
+    if (!window.confirm(`¿Estás seguro de que deseas eliminar la columna "${colName}" y todos sus datos de celdas?`)) {
+      return;
+    }
+
+    setTrialsData(prev => {
+      if (!prev) return prev;
+      const updatedCols = prev.columns.filter((_, idx) => idx !== colIdx);
+      const updatedCells = {};
+      Object.keys(prev.cells).forEach(key => {
+        const [r, c] = key.split('_').map(Number);
+        if (c < colIdx) {
+          updatedCells[`${r}_${c}`] = prev.cells[key];
+        } else if (c > colIdx) {
+          updatedCells[`${r}_${c - 1}`] = prev.cells[key];
+        }
+      });
+
+      const updatedData = { ...prev, columns: updatedCols, cells: updatedCells };
+      dbService.saveProjectTrials(project.id, updatedData)
+        .then(saved => setTrialsData(saved))
+        .catch(err => alert('Error al guardar: ' + err.message));
+      return updatedData;
+    });
+  };
+
+  const handleDeleteRow = (rowIdx) => {
+    const rowName = trialsData.rows[rowIdx];
+    if (!window.confirm(`¿Estás seguro de que deseas eliminar la fila "${rowName}" y todos sus datos de celdas?`)) {
+      return;
+    }
+
+    setTrialsData(prev => {
+      if (!prev) return prev;
+      const updatedRows = prev.rows.filter((_, idx) => idx !== rowIdx);
+      const updatedCells = {};
+      Object.keys(prev.cells).forEach(key => {
+        const [r, c] = key.split('_').map(Number);
+        if (r < rowIdx) {
+          updatedCells[`${r}_${c}`] = prev.cells[key];
+        } else if (r > rowIdx) {
+          updatedCells[`${r - 1}_${c}`] = prev.cells[key];
+        }
+      });
+
+      const updatedData = { ...prev, rows: updatedRows, cells: updatedCells };
+      dbService.saveProjectTrials(project.id, updatedData)
+        .then(saved => setTrialsData(saved))
+        .catch(err => alert('Error al guardar: ' + err.message));
+      return updatedData;
+    });
+  };
 
   // --- CÁLCULO DE MÉTRICAS ESPECÍFICAS DEL PROYECTO ---
   const projectMaterials = materials.filter(m => m.project_id === project.id);
@@ -87,31 +348,23 @@ export default function ProjectDetails({
     }
   };
 
-  const handleDocUpload = async (e) => {
+  const handleNoteFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     try {
-      setUploadingDoc(true);
-      const url = await dbService.uploadFile(file, 'docs');
-      await dbService.updateProject(project.id, { doc_url: url });
-      onRefresh();
+      setUploadingNoteFile(true);
+      const url = await dbService.uploadFile(file, 'notes');
+      setNoteForm(prev => ({ ...prev, file_url: url }));
     } catch (err) {
       console.error(err);
-      alert('Error al subir el documento: ' + err.message);
+      alert('Error al subir el archivo: ' + err.message);
     } finally {
-      setUploadingDoc(false);
+      setUploadingNoteFile(false);
     }
   };
 
-  const handleRemoveDoc = async () => {
-    if (window.confirm('¿Seguro que deseas eliminar el documento explicativo de este proyecto?')) {
-      try {
-        await dbService.updateProject(project.id, { doc_url: null });
-        onRefresh();
-      } catch (err) {
-        alert('Error al eliminar: ' + err.message);
-      }
-    }
+  const handleRemoveNoteFile = () => {
+    setNoteForm(prev => ({ ...prev, file_url: '' }));
   };
 
   // --- ACCIONES DE MATERIALES ---
@@ -346,7 +599,7 @@ export default function ProjectDetails({
 
   // --- ACCIONES DE NOTAS ---
   const openNewNoteModal = () => {
-    setNoteForm({ title: '', content: '' });
+    setNoteForm({ title: '', content: '', file_url: '' });
     setEditingNoteId(null);
     setIsNoteModalOpen(true);
   };
@@ -355,7 +608,8 @@ export default function ProjectDetails({
     e.stopPropagation();
     setNoteForm({
       title: note.title,
-      content: note.content
+      content: note.content || '',
+      file_url: note.file_url || ''
     });
     setEditingNoteId(note.id);
     setIsNoteModalOpen(true);
@@ -363,8 +617,8 @@ export default function ProjectDetails({
 
   const handleNoteSubmit = async (e) => {
     e.preventDefault();
-    if (!noteForm.title || !noteForm.content) {
-      alert('La nota debe tener un título y contenido');
+    if (!noteForm.title || (!noteForm.content && !noteForm.file_url)) {
+      alert('La nota debe tener un título y contenido o un archivo adjunto');
       return;
     }
 
@@ -531,38 +785,6 @@ export default function ProjectDetails({
             )}
           </div>
 
-          {/* Documento explicativo */}
-          {project.doc_url ? (
-            <div className="project-doc-box">
-              <div className="doc-info">
-                <FileText size={20} style={{ color: 'var(--accent-primary)' }} />
-                <div>
-                  <p style={{ fontWeight: 600, fontSize: '0.85rem' }}>Documento Explicativo del Proyecto</p>
-                  <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Cargado en almacenamiento persistente</p>
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <a href={project.doc_url} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                  Ver <ExternalLink size={12} />
-                </a>
-                <button onClick={handleRemoveDoc} className="btn btn-danger btn-sm btn-icon">
-                  <Trash2 size={12} />
-                </button>
-              </div>
-            </div>
-          ) : (
-            <label className="btn btn-secondary btn-sm" style={{ width: 'fit-content', marginTop: '1rem', cursor: 'pointer', display: 'inline-flex' }}>
-              <input 
-                type="file" 
-                accept=".pdf,.doc,.docx,.txt" 
-                style={{ display: 'none' }} 
-                onChange={handleDocUpload}
-                disabled={uploadingDoc}
-              />
-              <Upload size={14} style={{ marginRight: '0.4rem' }} />
-              {uploadingDoc ? 'Subiendo documento...' : 'Subir Documento Explicativo (PDF/Word)'}
-            </label>
-          )}
         </div>
       </div>
 
@@ -592,6 +814,16 @@ export default function ProjectDetails({
             <FileText size={16} /> Notas ({projectNotes.length})
           </span>
         </button>
+        {(project.id === 'd2222222-2222-2222-2222-222222222222' || project.name?.toLowerCase().includes('recubrimiento')) && (
+          <button 
+            className={`tab-btn ${activeTab === 'trials' ? 'active' : ''}`}
+            onClick={() => setActiveTab('trials')}
+          >
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Beaker size={16} /> Ensayos
+            </span>
+          </button>
+        )}
       </div>
 
       {/* Pestaña: Materiales */}
@@ -821,7 +1053,7 @@ export default function ProjectDetails({
           <div className="notes-grid">
             {projectNotes.map(note => {
               // Limpiar marcas markdown básicas del snippet
-              const cleanText = note.content.replace(/[#\*`_\-|>]/g, '').trim().substring(0, 180);
+              const cleanText = (note.content || '').replace(/[#\*`_\-|>]/g, '').trim().substring(0, 180);
               const snippet = cleanText.length >= 180 ? `${cleanText}...` : cleanText;
               
               const noteDate = note.created_at
@@ -836,8 +1068,15 @@ export default function ProjectDetails({
                   style={{ cursor: 'pointer' }}
                 >
                   <div>
-                    <h3 className="note-card-title">{note.title}</h3>
-                    <p className="note-card-snippet">{snippet}</p>
+                    <h3 className="note-card-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
+                      <span style={{ flex: 1 }}>{note.title}</span>
+                      {note.file_url && (
+                        <span style={{ flexShrink: 0, display: 'inline-flex', padding: '0.15rem 0.35rem', borderRadius: '4px', backgroundColor: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--border-color)', color: 'var(--accent-primary)', fontSize: '0.65rem', fontWeight: 600, alignItems: 'center', gap: '0.2rem' }}>
+                          <FileText size={10} /> Adjunto
+                        </span>
+                      )}
+                    </h3>
+                    <p className="note-card-snippet">{snippet || 'Ver documento adjunto...'}</p>
                   </div>
                   <div className="note-card-footer">
                     <span>{noteDate}</span>
@@ -872,6 +1111,303 @@ export default function ProjectDetails({
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Pestaña: Ensayos */}
+      {activeTab === 'trials' && (project.id === 'd2222222-2222-2222-2222-222222222222' || project.name?.toLowerCase().includes('recubrimiento')) && (
+        <div className="trials-tab-content" style={{ animation: 'fadeIn 0.3s ease' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <h2 style={{ fontSize: '1.2rem', fontFamily: 'var(--font-display)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Beaker size={20} style={{ color: 'var(--accent-primary)' }} />
+                Registro y Control de Ensayos Técnicos
+              </h2>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                Los invitados pueden registrar los resultados de las pruebas. Al confirmar y bloquear la fila, los datos quedan inmutables.
+              </p>
+            </div>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              {!isAdmin ? (
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setPendingAction({ type: 'load_trials' });
+                    setIsPinModalOpen(true);
+                  }}
+                  className="btn btn-secondary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}
+                >
+                  <Lock size={14} /> Modo Estructura (Admin)
+                </button>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span className="status-pill approved" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <Unlock size={12} /> Estructura Editable (Admin)
+                  </span>
+                </div>
+              )}
+              
+              <button 
+                type="button"
+                onClick={handleSaveDraft} 
+                disabled={trialsLoading || isSavingTrials} 
+                className="btn btn-primary"
+                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+              >
+                <Save size={16} /> Guardar Borrador
+              </button>
+            </div>
+          </div>
+
+          {trialsLoading ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}>
+              <RefreshCw className="pulse-dot" size={24} style={{ color: 'var(--accent-primary)' }} />
+            </div>
+          ) : !trialsData ? (
+            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+              No se pudieron cargar los datos de ensayos.
+            </div>
+          ) : (
+            <div className="table-responsive" style={{ border: '1px solid var(--border-color)', borderRadius: '12px', overflow: 'hidden', backgroundColor: 'var(--bg-secondary)', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ backgroundColor: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border-color)' }}>
+                    {trialsData.columns.map((colName, colIdx) => (
+                      <th 
+                        key={colIdx} 
+                        style={{ 
+                          padding: '1rem', 
+                          textAlign: 'left', 
+                          fontWeight: '600', 
+                          color: 'var(--text-primary)',
+                          borderRight: '1px solid var(--border-color)',
+                          position: 'relative'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                          <span>{colName}</span>
+                          {isAdmin && (
+                            <div style={{ display: 'flex', gap: '0.2rem' }}>
+                              <button 
+                                type="button"
+                                onClick={() => handleRenameColumn(colIdx)} 
+                                className="btn btn-icon btn-sm" 
+                                style={{ padding: '0.2rem', minWidth: 'auto', minHeight: 'auto' }} 
+                                title="Renombrar columna"
+                              >
+                                <Edit2 size={10} />
+                              </button>
+                              {trialsData.columns.length > 2 && (
+                                <button 
+                                  type="button"
+                                  onClick={() => handleDeleteColumn(colIdx)} 
+                                  className="btn btn-icon btn-sm" 
+                                  style={{ padding: '0.2rem', minWidth: 'auto', minHeight: 'auto', color: 'var(--state-danger)' }} 
+                                  title="Eliminar columna"
+                                >
+                                  <Trash2 size={10} />
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </th>
+                    ))}
+                    <th style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-primary)', fontWeight: '600' }}>
+                      Acciones
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {trialsData.rows.map((rowName, rowIdx) => {
+                    const isRowLocked = trialsData.columns.some((_, colIdx) => {
+                      return trialsData.cells[`${rowIdx}_${colIdx}`]?.confirmed === true;
+                    });
+
+                    return (
+                      <tr 
+                        key={rowIdx} 
+                        style={{ 
+                          borderBottom: '1px solid var(--border-color)',
+                          backgroundColor: isRowLocked ? 'rgba(255, 255, 255, 0.01)' : 'transparent',
+                          transition: 'background-color 0.2s ease'
+                        }}
+                      >
+                        {/* Celdas de datos (incluyendo la primera columna 'Método') */}
+                        {trialsData.columns.map((_, colIdx) => {
+                          const cellKey = `${rowIdx}_${colIdx}`;
+                          const cell = trialsData.cells[cellKey];
+                          const isConfirmed = cell?.confirmed === true;
+
+                          return (
+                            <td 
+                              key={colIdx} 
+                              style={{ 
+                                padding: '0.5rem', 
+                                borderRight: '1px solid var(--border-color)',
+                                minWidth: '130px',
+                                backgroundColor: colIdx === 0 ? 'rgba(255, 255, 255, 0.01)' : 'transparent'
+                              }}
+                            >
+                              {isConfirmed && !isAdmin ? (
+                                <div 
+                                  style={{ 
+                                    padding: '0.4rem 0.6rem', 
+                                    color: 'var(--text-secondary)', 
+                                    backgroundColor: 'rgba(16,185,129,0.04)', 
+                                    borderRadius: '6px', 
+                                    display: 'flex', 
+                                    alignItems: 'flex-start', 
+                                    gap: '0.4rem',
+                                    border: '1px dashed rgba(16,185,129,0.2)',
+                                    fontSize: '0.8rem',
+                                    fontWeight: colIdx === 0 ? '600' : 'normal'
+                                  }}
+                                  title="Campo bloqueado y verificado"
+                                >
+                                  <Lock size={12} style={{ color: 'var(--state-approved)', flexShrink: 0, marginTop: '0.15rem' }} />
+                                  <span style={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap', width: '100%', textAlign: 'left' }}>{cell?.value || ''}</span>
+                                </div>
+                              ) : (
+                                <textarea 
+                                  className="form-input" 
+                                  rows={2}
+                                  style={{ 
+                                    width: '100%', 
+                                    padding: '0.4rem 0.6rem', 
+                                    fontSize: '0.8rem',
+                                    fontWeight: colIdx === 0 ? '600' : 'normal',
+                                    backgroundColor: isConfirmed ? 'rgba(16,185,129,0.02)' : 'var(--bg-primary)',
+                                    borderColor: isConfirmed ? 'var(--state-approved)' : 'var(--border-color)',
+                                    borderRadius: '6px',
+                                    resize: 'vertical',
+                                    fontFamily: 'inherit',
+                                    minHeight: '44px',
+                                    lineHeight: '1.4',
+                                    whiteSpace: 'pre-wrap'
+                                  }} 
+                                  value={cell?.value || ''} 
+                                  onChange={e => handleCellChange(rowIdx, colIdx, e.target.value)} 
+                                  placeholder={colIdx === 0 ? "Nombre de ensayo..." : "Escribir resultado..."} 
+                                />
+                              )}
+                            </td>
+                          );
+                        })}
+
+                        {/* Celda de Acciones (Confirmar / Desbloquear / Eliminar Fila) */}
+                        <td style={{ padding: '0.5rem', textAlign: 'center', minWidth: '180px' }}>
+                          <div style={{ display: 'flex', gap: '0.45rem', justifyContent: 'center', alignItems: 'center' }}>
+                            <button 
+                              type="button"
+                              onClick={() => setSelectedViewTrialRow(rowIdx)} 
+                              className="btn btn-secondary btn-sm"
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', padding: '0.25rem 0.5rem', fontSize: '0.7rem' }}
+                              title="Ver todos los campos del ensayo en detalle"
+                            >
+                              <ExternalLink size={12} /> Ver
+                            </button>
+                            {isAdmin ? (
+                              <>
+                                {isRowLocked ? (
+                                  <button 
+                                    type="button"
+                                    onClick={() => handleUnlockRow(rowIdx)} 
+                                    className="btn btn-secondary btn-sm"
+                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', padding: '0.25rem 0.5rem', fontSize: '0.7rem' }}
+                                  >
+                                    <Unlock size={12} /> Desbloquear
+                                  </button>
+                                ) : (
+                                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Editable</span>
+                                )}
+                                {trialsData.rows.length > 1 && (
+                                  <button 
+                                    type="button"
+                                    onClick={() => handleDeleteRow(rowIdx)} 
+                                    className="btn btn-icon btn-sm" 
+                                    style={{ padding: '0.2rem', minWidth: 'auto', minHeight: 'auto', color: 'var(--state-danger)' }} 
+                                    title="Eliminar fila"
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
+                                )}
+                              </>
+                            ) : (
+                              isRowLocked ? (
+                                <span 
+                                  className="status-pill approved" 
+                                  style={{ 
+                                    display: 'inline-flex', 
+                                    alignItems: 'center', 
+                                    gap: '0.25rem', 
+                                    fontSize: '0.7rem', 
+                                    padding: '0.25rem 0.5rem', 
+                                    borderRadius: '4px', 
+                                    backgroundColor: 'var(--state-approved-bg)', 
+                                    color: 'var(--state-approved)', 
+                                    fontWeight: 600 
+                                  }}
+                                >
+                                  <Lock size={10} /> Confirmado
+                                </span>
+                              ) : (
+                                <button 
+                                  type="button"
+                                  onClick={() => handleConfirmRow(rowIdx)} 
+                                  disabled={!isRowFilled(rowIdx)} 
+                                  style={{ 
+                                    backgroundColor: isRowFilled(rowIdx) ? 'var(--state-approved)' : 'var(--border-color)',
+                                    color: isRowFilled(rowIdx) ? '#ffffff' : 'var(--text-secondary)',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    cursor: isRowFilled(rowIdx) ? 'pointer' : 'not-allowed',
+                                    opacity: isRowFilled(rowIdx) ? 1 : 0.6,
+                                    display: 'inline-flex', 
+                                    alignItems: 'center', 
+                                    gap: '0.25rem', 
+                                    padding: '0.3rem 0.6rem', 
+                                    fontSize: '0.75rem',
+                                    fontWeight: '600'
+                                  }}
+                                >
+                                  <Check size={12} /> Confirmar
+                                </button>
+                              )
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+
+              {/* Botones de Estructura para el Administrador */}
+              {isAdmin && (
+                <div style={{ display: 'flex', gap: '0.75rem', padding: '1rem', borderTop: '1px solid var(--border-color)', backgroundColor: 'rgba(255,255,255,0.01)' }}>
+                  <button 
+                    type="button"
+                    onClick={handleAddRow} 
+                    className="btn btn-secondary btn-sm"
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                  >
+                    <Plus size={14} /> Agregar Ensayo (Fila)
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={handleAddColumn} 
+                    className="btn btn-secondary btn-sm"
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                  >
+                    <Plus size={14} /> Agregar Parámetro (Columna)
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -1059,7 +1595,7 @@ export default function ProjectDetails({
                 </div>
 
                 <div className="form-group">
-                  <label>Contenido de la Nota (Soporta Markdown) *</label>
+                  <label>Contenido de la Nota (Soporta Markdown)</label>
                   <textarea 
                     className="form-textarea" 
                     placeholder="Escribe tu nota aquí..."
@@ -1067,8 +1603,46 @@ export default function ProjectDetails({
                     value={noteForm.content}
                     onChange={e => setNoteForm({ ...noteForm, content: e.target.value })}
                     style={{ fontFamily: 'var(--font-sans)', resize: 'vertical' }}
-                    required 
                   />
+                </div>
+
+                <div style={{ marginTop: '1rem' }}>
+                  {noteForm.file_url ? (
+                    <div className="form-group">
+                      <label>Documento Adjunto</label>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.02)', padding: '0.75rem 1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', marginTop: '0.25rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <FileText size={18} style={{ color: 'var(--accent-primary)' }} />
+                          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Archivo cargado</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.4rem' }}>
+                          <a href={noteForm.file_url} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                            Ver <ExternalLink size={12} />
+                          </a>
+                          <button type="button" onClick={handleRemoveNoteFile} className="btn btn-danger btn-sm btn-icon" style={{ width: '28px', height: '28px', padding: 0 }} title="Quitar archivo">
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="form-group">
+                      <label>Adjuntar Documento (PDF/Word/etc.)</label>
+                      <div style={{ marginTop: '0.25rem' }}>
+                        <label className="btn btn-secondary btn-sm" style={{ width: 'fit-content', cursor: 'pointer', display: 'inline-flex', gap: '0.4rem' }}>
+                          <input 
+                            type="file" 
+                            accept=".pdf,.doc,.docx,.txt" 
+                            style={{ display: 'none' }} 
+                            onChange={handleNoteFileUpload}
+                            disabled={uploadingNoteFile}
+                          />
+                          <Upload size={14} />
+                          {uploadingNoteFile ? 'Subiendo documento...' : 'Subir Documento'}
+                        </label>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="modal-footer">
@@ -1091,7 +1665,19 @@ export default function ProjectDetails({
               <button className="modal-close-btn" onClick={() => setSelectedViewNote(null)}>×</button>
             </div>
             <div className="modal-body" style={{ padding: '2rem' }}>
-              <MarkdownRenderer content={selectedViewNote.content} />
+              {selectedViewNote.content && <MarkdownRenderer content={selectedViewNote.content} />}
+              {selectedViewNote.file_url && (
+                <div style={{ marginTop: selectedViewNote.content ? '1.5rem' : '0px', padding: '1.25rem', borderRadius: 'var(--radius-sm)', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '0.75rem' }}>
+                  <FileText size={36} style={{ color: 'var(--accent-primary)', opacity: 0.8 }} />
+                  <div>
+                    <p style={{ fontWeight: 600, fontSize: '0.9rem', margin: 0 }}>Documento Adjunto disponible</p>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '0.25rem 0 0' }}>Este registro cuenta con un archivo externo adjunto.</p>
+                  </div>
+                  <a href={selectedViewNote.file_url} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
+                    <ExternalLink size={16} /> Abrir Documento Adjunto
+                  </a>
+                </div>
+              )}
             </div>
             <div className="modal-footer">
               <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1112,6 +1698,73 @@ export default function ProjectDetails({
                   <button type="button" className="btn btn-primary" onClick={() => setSelectedViewNote(null)}>Cerrar</button>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ====================================================================
+         MODAL: DETALLES DEL ENSAYO
+         ==================================================================== */}
+      {selectedViewTrialRow !== null && trialsData && (
+        <div className="modal-overlay" style={{ zIndex: 1100 }}>
+          <div className="modal-content" style={{ maxWidth: '600px', width: '100%' }}>
+            <div className="modal-header">
+              <h3 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontFamily: 'var(--font-display)' }}>
+                <Beaker size={18} style={{ color: 'var(--accent-primary)' }} />
+                Detalles del Ensayo (Fila {selectedViewTrialRow + 1})
+              </h3>
+              <button type="button" className="modal-close-btn" onClick={() => setSelectedViewTrialRow(null)}>×</button>
+            </div>
+            <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                {trialsData.columns.map((colName, colIdx) => {
+                  const cellKey = `${selectedViewTrialRow}_${colIdx}`;
+                  const cellValue = trialsData.cells[cellKey]?.value || '';
+                  const isConfirmed = trialsData.cells[cellKey]?.confirmed === true;
+
+                  return (
+                    <div key={colIdx} style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ fontWeight: '600', fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                          {colName}
+                        </span>
+                        {isConfirmed && (
+                          <span className="status-pill approved" style={{ fontSize: '0.65rem', padding: '0.1rem 0.3rem', display: 'flex', alignItems: 'center', gap: '0.15rem' }}>
+                            <Lock size={8} /> Confirmado
+                          </span>
+                        )}
+                      </div>
+                      <div 
+                        style={{ 
+                          whiteSpace: 'pre-wrap', 
+                          backgroundColor: 'var(--bg-primary)', 
+                          padding: '0.75rem 1rem', 
+                          borderRadius: '8px', 
+                          border: '1px solid var(--border-color)',
+                          fontSize: '0.85rem',
+                          color: 'var(--text-secondary)',
+                          minHeight: '40px',
+                          lineHeight: '1.5',
+                          wordBreak: 'break-word',
+                          textAlign: 'left'
+                        }}
+                      >
+                        {cellValue || <em style={{ color: 'var(--text-muted)' }}>Sin registrar</em>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="modal-footer" style={{ borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', padding: '1rem' }}>
+              <button 
+                type="button" 
+                className="btn btn-primary" 
+                onClick={() => setSelectedViewTrialRow(null)}
+              >
+                Cerrar
+              </button>
             </div>
           </div>
         </div>
