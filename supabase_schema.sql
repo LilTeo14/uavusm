@@ -33,6 +33,8 @@ CREATE TABLE materials (
     quantity INTEGER NOT NULL DEFAULT 1,
     unit_price NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
     status TEXT NOT NULL CHECK (status IN ('pending', 'approved', 'purchased')) DEFAULT 'pending',
+    purchase_status TEXT,
+    link TEXT,
     requested_by TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
