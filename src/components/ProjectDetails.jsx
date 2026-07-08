@@ -615,6 +615,120 @@ export default function ProjectDetails({
       ? new Date(note.created_at).toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
       : 'Sin fecha';
 
+    // Función auxiliar para parsear markdown de forma básica a HTML para impresión
+    const parseMarkdownToHtml = (markdown) => {
+      if (!markdown) return '';
+
+      const parseInline = (text) => {
+        if (!text) return '';
+        let html = text
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+        
+        // Negritas **
+        html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        // Cursivas * y _
+        html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+        html = html.replace(/_(.*?)_/g, '<em>$1</em>');
+        // Código en línea `
+        html = html.replace(/`(.*?)`/g, '<code style="background-color: #f1f5f9; padding: 2px 4px; border-radius: 4px; font-family: monospace; font-size: 0.9em; color: #db2777;">$1</code>');
+        
+        return html;
+      };
+
+      const blocks = markdown.split(/\n\s*\n/);
+      
+      return blocks.map((block) => {
+        const trimmed = block.trim();
+        if (!trimmed) return '';
+
+        // 1. Encabezados
+        if (trimmed.startsWith('# ')) {
+          return `<h1>${parseInline(trimmed.substring(2))}</h1>`;
+        }
+        if (trimmed.startsWith('## ')) {
+          return `<h2>${parseInline(trimmed.substring(3))}</h2>`;
+        }
+        if (trimmed.startsWith('### ')) {
+          return `<h3>${parseInline(trimmed.substring(4))}</h3>`;
+        }
+
+        // 2. Línea horizontal
+        if (trimmed === '---') {
+          return `<hr style="margin: 2rem 0; border: none; border-bottom: 1px solid #e2e8f0;" />`;
+        }
+
+        // 3. Blockquotes
+        if (trimmed.startsWith('> ')) {
+          const quoteContent = trimmed.split('\n').map(line => line.replace(/^>\s?/, '')).join('\n');
+          return `<blockquote style="border-left: 4px solid #10b981; padding-left: 1rem; margin-left: 0; color: #475569; font-style: italic;">${parseInline(quoteContent)}</blockquote>`;
+        }
+
+        // 4. Listas desordenadas
+        if (trimmed.startsWith('* ') || trimmed.startsWith('- ')) {
+          const items = trimmed.split('\n');
+          const itemsHtml = items.map((item) => {
+            const cleaned = item.replace(/^[\*\-]\s+/, '');
+            return `<li>${parseInline(cleaned)}</li>`;
+          }).join('');
+          return `<ul>${itemsHtml}</ul>`;
+        }
+
+        // 5. Listas ordenadas
+        if (/^\d+\.\s+/.test(trimmed)) {
+          const items = trimmed.split('\n');
+          const itemsHtml = items.map((item) => {
+            const cleaned = item.replace(/^\d+\.\s+/, '');
+            return `<li>${parseInline(cleaned)}</li>`;
+          }).join('');
+          return `<ol>${itemsHtml}</ol>`;
+        }
+
+        // 6. Tablas
+        if (trimmed.startsWith('|')) {
+          const rows = trimmed.split('\n');
+          const hasAlignRow = rows.length > 1 && rows[1].includes(':---');
+          const dataRows = hasAlignRow ? rows.slice(0, 1).concat(rows.slice(2)) : rows;
+          const tableHeader = dataRows[0];
+          const tableBody = dataRows.slice(1);
+
+          const parseCells = (rowText) => {
+            return rowText
+              .split('|')
+              .slice(1, -1)
+              .map(c => c.trim());
+          };
+
+          const headers = parseCells(tableHeader);
+          const headersHtml = headers.map(h => `<th style="padding: 10px 14px; text-align: left; border: 1px solid #e2e8f0; background-color: #f8fafc; font-weight: 600;">${parseInline(h)}</th>`).join('');
+
+          const bodyHtml = tableBody.map((row, rIdx) => {
+            const cells = parseCells(row);
+            if (cells.length === 0 || (cells.length === 1 && cells[0] === '')) return '';
+            const cellsHtml = cells.map(c => `<td style="padding: 10px 14px; border: 1px solid #e2e8f0;">${parseInline(c)}</td>`).join('');
+            return `<tr style="background-color: ${rIdx % 2 === 1 ? '#f8fafc' : 'transparent'}; border-bottom: 1px solid #e2e8f0;">${cellsHtml}</tr>`;
+          }).join('');
+
+          return `
+            <div style="overflow-x: auto; margin-bottom: 1.5rem; margin-top: 1rem;">
+              <table style="width: 100%; border-collapse: collapse; border: 1px solid #e2e8f0;">
+                <thead><tr>${headersHtml}</tr></thead>
+                <tbody>${bodyHtml}</tbody>
+              </table>
+            </div>
+          `;
+        }
+
+        // Párrafo por defecto con soporte de saltos de línea simples
+        const lines = trimmed.split('\n');
+        const paragraphContent = lines.map(line => parseInline(line)).join('<br />');
+        return `<p style="margin-top: 0; margin-bottom: 1.25rem;">${paragraphContent}</p>`;
+      }).join('');
+    };
+
+    const contentHtml = parseMarkdownToHtml(note.content);
+
     let attachmentHtml = '';
     if (note.file_url && isImageFile(note.file_url)) {
       attachmentHtml = `
@@ -672,9 +786,36 @@ export default function ProjectDetails({
             }
             .content {
               font-size: 1.05rem;
-              white-space: pre-wrap;
-              word-break: break-word;
               color: #334155;
+            }
+            .content h1 {
+              font-size: 1.75rem;
+              font-weight: 700;
+              margin-top: 1.75rem;
+              margin-bottom: 0.75rem;
+              color: #0f172a;
+            }
+            .content h2 {
+              font-size: 1.5rem;
+              font-weight: 700;
+              margin-top: 1.5rem;
+              margin-bottom: 0.75rem;
+              color: #0f172a;
+            }
+            .content h3 {
+              font-size: 1.25rem;
+              font-weight: 700;
+              margin-top: 1.25rem;
+              margin-bottom: 0.5rem;
+              color: #0f172a;
+            }
+            .content ul, .content ol {
+              margin-top: 0;
+              margin-bottom: 1.25rem;
+              padding-left: 1.5rem;
+            }
+            .content li {
+              margin-bottom: 0.35rem;
             }
             .attachment {
               margin-top: 3rem;
@@ -723,7 +864,7 @@ export default function ProjectDetails({
                 </div>
               </div>
             </div>
-            <div class="content">${note.content || ''}</div>
+            <div class="content">${contentHtml}</div>
             ${attachmentHtml}
           </div>
           <script>
