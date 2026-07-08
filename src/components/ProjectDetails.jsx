@@ -935,6 +935,7 @@ export default function ProjectDetails({
                     <option value="Gabriel.Z">Gabriel.Z</option>
                     <option value="Pablo.G">Pablo.G</option>
                     <option value="Lissete.H">Lissete.H</option>
+                    <option value="Mateo.M">Mateo.M</option>
                   </select>
                 </div>
               </div>
