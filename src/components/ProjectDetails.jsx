@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
   Plus, ClipboardList, Package, Upload, FileText, Trash2, Edit2, 
   Calendar, User, Check, ArrowRight, Download, ExternalLink, RefreshCw,
-  Lock, Unlock, ShieldAlert, AlertTriangle, Link, Beaker, Save
+  Lock, Unlock, ShieldAlert, AlertTriangle, Link, Beaker, Save, Image
 } from 'lucide-react';
 import { dbService } from '../services/db';
 
@@ -597,6 +597,13 @@ export default function ProjectDetails({
     }
   };
 
+  const isImageFile = (url) => {
+    if (!url) return false;
+    if (url.startsWith('data:image/') || url.startsWith('blob:')) return true;
+    const ext = url.split('?')[0].split('.').pop().toLowerCase();
+    return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext);
+  };
+
   // --- ACCIONES DE NOTAS ---
   const openNewNoteModal = () => {
     setNoteForm({ title: '', content: '', file_url: '' });
@@ -1071,12 +1078,27 @@ export default function ProjectDetails({
                     <h3 className="note-card-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
                       <span style={{ flex: 1 }}>{note.title}</span>
                       {note.file_url && (
-                        <span style={{ flexShrink: 0, display: 'inline-flex', padding: '0.15rem 0.35rem', borderRadius: '4px', backgroundColor: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--border-color)', color: 'var(--accent-primary)', fontSize: '0.65rem', fontWeight: 600, alignItems: 'center', gap: '0.2rem' }}>
-                          <FileText size={10} /> Adjunto
-                        </span>
+                        isImageFile(note.file_url) ? (
+                          <span style={{ flexShrink: 0, display: 'inline-flex', padding: '0.15rem 0.35rem', borderRadius: '4px', backgroundColor: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.1)', color: 'var(--state-approved)', fontSize: '0.65rem', fontWeight: 600, alignItems: 'center', gap: '0.2rem' }}>
+                            <Image size={10} /> Imagen
+                          </span>
+                        ) : (
+                          <span style={{ flexShrink: 0, display: 'inline-flex', padding: '0.15rem 0.35rem', borderRadius: '4px', backgroundColor: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--border-color)', color: 'var(--accent-primary)', fontSize: '0.65rem', fontWeight: 600, alignItems: 'center', gap: '0.2rem' }}>
+                            <FileText size={10} /> Adjunto
+                          </span>
+                        )
                       )}
                     </h3>
-                    <p className="note-card-snippet">{snippet || 'Ver documento adjunto...'}</p>
+                    <p className="note-card-snippet">{snippet || (isImageFile(note.file_url) ? 'Ver imagen adjunta...' : 'Ver documento adjunto...')}</p>
+                    {note.file_url && isImageFile(note.file_url) && (
+                      <div style={{ marginTop: '0.75rem', width: '100%', height: '120px', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+                        <img 
+                          src={note.file_url} 
+                          alt={note.title} 
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                        />
+                      </div>
+                    )}
                   </div>
                   <div className="note-card-footer">
                     <span>{noteDate}</span>
@@ -1609,11 +1631,17 @@ export default function ProjectDetails({
                 <div style={{ marginTop: '1rem' }}>
                   {noteForm.file_url ? (
                     <div className="form-group">
-                      <label>Documento Adjunto</label>
+                      <label>{isImageFile(noteForm.file_url) ? 'Imagen Adjunta' : 'Documento Adjunto'}</label>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.02)', padding: '0.75rem 1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', marginTop: '0.25rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <FileText size={18} style={{ color: 'var(--accent-primary)' }} />
-                          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Archivo cargado</span>
+                          {isImageFile(noteForm.file_url) ? (
+                            <img src={noteForm.file_url} alt="Miniatura" style={{ width: '36px', height: '36px', objectFit: 'cover', borderRadius: '4px', border: '1px solid var(--border-color)' }} />
+                          ) : (
+                            <FileText size={18} style={{ color: 'var(--accent-primary)' }} />
+                          )}
+                          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                            {isImageFile(noteForm.file_url) ? 'Imagen cargada con éxito' : 'Archivo cargado con éxito'}
+                          </span>
                         </div>
                         <div style={{ display: 'flex', gap: '0.4rem' }}>
                           <a href={noteForm.file_url} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
@@ -1627,18 +1655,18 @@ export default function ProjectDetails({
                     </div>
                   ) : (
                     <div className="form-group">
-                      <label>Adjuntar Documento (PDF/Word/etc.)</label>
+                      <label>Adjuntar Documento o Imagen (PDF/Word/Imagen...)</label>
                       <div style={{ marginTop: '0.25rem' }}>
                         <label className="btn btn-secondary btn-sm" style={{ width: 'fit-content', cursor: 'pointer', display: 'inline-flex', gap: '0.4rem' }}>
                           <input 
                             type="file" 
-                            accept=".pdf,.doc,.docx,.txt" 
+                            accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.gif,.webp" 
                             style={{ display: 'none' }} 
                             onChange={handleNoteFileUpload}
                             disabled={uploadingNoteFile}
                           />
                           <Upload size={14} />
-                          {uploadingNoteFile ? 'Subiendo documento...' : 'Subir Documento'}
+                          {uploadingNoteFile ? 'Subiendo archivo...' : 'Subir Documento o Imagen'}
                         </label>
                       </div>
                     </div>
@@ -1667,16 +1695,31 @@ export default function ProjectDetails({
             <div className="modal-body" style={{ padding: '2rem' }}>
               {selectedViewNote.content && <MarkdownRenderer content={selectedViewNote.content} />}
               {selectedViewNote.file_url && (
-                <div style={{ marginTop: selectedViewNote.content ? '1.5rem' : '0px', padding: '1.25rem', borderRadius: 'var(--radius-sm)', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '0.75rem' }}>
-                  <FileText size={36} style={{ color: 'var(--accent-primary)', opacity: 0.8 }} />
-                  <div>
-                    <p style={{ fontWeight: 600, fontSize: '0.9rem', margin: 0 }}>Documento Adjunto disponible</p>
-                    <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '0.25rem 0 0' }}>Este registro cuenta con un archivo externo adjunto.</p>
+                isImageFile(selectedViewNote.file_url) ? (
+                  <div style={{ marginTop: selectedViewNote.content ? '1.5rem' : '0px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', width: '100%' }}>
+                    <div style={{ width: '100%', maxHeight: '400px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', display: 'flex', justifyContent: 'center', backgroundColor: '#070a13' }}>
+                      <img 
+                        src={selectedViewNote.file_url} 
+                        alt={selectedViewNote.title} 
+                        style={{ maxWidth: '100%', maxHeight: '400px', objectFit: 'contain' }} 
+                      />
+                    </div>
+                    <a href={selectedViewNote.file_url} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.25rem' }}>
+                      <ExternalLink size={14} /> Ver en tamaño completo
+                    </a>
                   </div>
-                  <a href={selectedViewNote.file_url} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
-                    <ExternalLink size={16} /> Abrir Documento Adjunto
-                  </a>
-                </div>
+                ) : (
+                  <div style={{ marginTop: selectedViewNote.content ? '1.5rem' : '0px', padding: '1.25rem', borderRadius: 'var(--radius-sm)', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '0.75rem' }}>
+                    <FileText size={36} style={{ color: 'var(--accent-primary)', opacity: 0.8 }} />
+                    <div>
+                      <p style={{ fontWeight: 600, fontSize: '0.9rem', margin: 0 }}>Documento Adjunto disponible</p>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '0.25rem 0 0' }}>Este registro cuenta con un archivo externo adjunto.</p>
+                    </div>
+                    <a href={selectedViewNote.file_url} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
+                      <ExternalLink size={16} /> Abrir Documento Adjunto
+                    </a>
+                  </div>
+                )
               )}
             </div>
             <div className="modal-footer">
