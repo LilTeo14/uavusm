@@ -604,6 +604,140 @@ export default function ProjectDetails({
     return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext);
   };
 
+  const handleDownloadNotePDF = (note) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Por favor, permite las ventanas emergentes (popups) para descargar el PDF.');
+      return;
+    }
+    
+    const noteDate = note.created_at
+      ? new Date(note.created_at).toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+      : 'Sin fecha';
+
+    let attachmentHtml = '';
+    if (note.file_url && isImageFile(note.file_url)) {
+      attachmentHtml = `
+        <div class="attachment">
+          <h3>Imagen Adjunta:</h3>
+          <div class="attachment-img-container">
+            <img src="${note.file_url}" alt="Adjunto" />
+          </div>
+        </div>
+      `;
+    }
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>${note.title}</title>
+          <style>
+            body {
+              font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+              color: #1e293b;
+              line-height: 1.6;
+              padding: 3rem;
+              margin: 0;
+              background-color: #ffffff;
+            }
+            .container {
+              max-width: 800px;
+              margin: 0 auto;
+            }
+            .header {
+              border-bottom: 2px solid #10b981;
+              padding-bottom: 1.5rem;
+              margin-bottom: 2rem;
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-end;
+            }
+            .header-info {
+              flex: 1;
+            }
+            .title {
+              font-size: 2.25rem;
+              font-weight: 800;
+              color: #0f172a;
+              margin: 0 0 0.5rem 0;
+              line-height: 1.2;
+            }
+            .meta {
+              font-size: 0.85rem;
+              color: #64748b;
+            }
+            .project-badge {
+              font-weight: 600;
+              color: #10b981;
+            }
+            .content {
+              font-size: 1.05rem;
+              white-space: pre-wrap;
+              word-break: break-word;
+              color: #334155;
+            }
+            .attachment {
+              margin-top: 3rem;
+              border-top: 1px dashed #e2e8f0;
+              padding-top: 2rem;
+              page-break-inside: avoid;
+            }
+            .attachment h3 {
+              font-size: 1.1rem;
+              color: #0f172a;
+              margin-top: 0;
+              margin-bottom: 1rem;
+            }
+            .attachment-img-container {
+              display: flex;
+              justify-content: center;
+              background-color: #f8fafc;
+              border: 1px solid #e2e8f0;
+              border-radius: 8px;
+              padding: 1.5rem;
+            }
+            .attachment img {
+              max-width: 100%;
+              max-height: 600px;
+              object-fit: contain;
+              border-radius: 4px;
+            }
+            @media print {
+              body {
+                padding: 0;
+              }
+              .container {
+                max-width: 100%;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="header-info">
+                <h1 class="title">${note.title}</h1>
+                <div class="meta">
+                  Proyecto: <span class="project-badge">${project.name}</span> &nbsp;|&nbsp; 
+                  Creado: ${noteDate}
+                </div>
+              </div>
+            </div>
+            <div class="content">${note.content || ''}</div>
+            ${attachmentHtml}
+          </div>
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   // --- ACCIONES DE NOTAS ---
   const openNewNoteModal = () => {
     setNoteForm({ title: '', content: '', file_url: '' });
@@ -1103,6 +1237,17 @@ export default function ProjectDetails({
                   <div className="note-card-footer">
                     <span>{noteDate}</span>
                     <div style={{ display: 'flex', gap: '0.5rem' }} onClick={e => e.stopPropagation()}>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDownloadNotePDF(note);
+                        }} 
+                        className="btn btn-secondary btn-icon"
+                        style={{ width: '26px', height: '26px', padding: 0 }}
+                        title="Descargar como PDF"
+                      >
+                        <Download size={12} />
+                      </button>
                       <button 
                         onClick={(e) => openEditNoteModal(e, note)} 
                         className="btn btn-secondary btn-icon"
@@ -1728,6 +1873,14 @@ export default function ProjectDetails({
                   Creado: {new Date(selectedViewNote.created_at).toLocaleString('es-CL')}
                 </span>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary" 
+                    onClick={() => handleDownloadNotePDF(selectedViewNote)}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                  >
+                    <Download size={14} /> Descargar PDF
+                  </button>
                   <button 
                     type="button" 
                     className="btn btn-secondary" 
