@@ -327,8 +327,11 @@ export default function AdminConsole({
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
             {projects.map(proj => {
               const projectMaterials = materials.filter(m => m.project_id === proj.id);
-              const spent = projectMaterials
+              const approved = projectMaterials
                 .filter(m => m.status === 'approved' || m.status === 'purchased')
+                .reduce((sum, m) => sum + (Number(m.unit_price) * Number(m.quantity)), 0);
+              const spent = projectMaterials
+                .filter(m => (m.status === 'approved' || m.status === 'purchased') && (m.purchase_status === 'pedido' || m.purchase_status === 'disponible'))
                 .reduce((sum, m) => sum + (Number(m.unit_price) * Number(m.quantity)), 0);
 
               return (
@@ -346,8 +349,14 @@ export default function AdminConsole({
                     <p style={{ color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
                       <strong>Presupuesto total:</strong> CLP {Number(proj.budget).toLocaleString('en-US')}
                     </p>
+                    <p style={{ color: 'var(--text-secondary)' }}>
+                      <strong>Total Aprobado:</strong> CLP {approved.toLocaleString('en-US')}
+                    </p>
                     <p style={{ color: spent > Number(proj.budget) ? 'var(--state-danger)' : 'var(--state-approved)', fontWeight: 600 }}>
-                      <strong>Gastado/Aprobado:</strong> CLP {spent.toLocaleString('en-US')}
+                      <strong>Total Gastado:</strong> CLP {spent.toLocaleString('en-US')}
+                    </p>
+                    <p style={{ color: 'var(--text-secondary)' }}>
+                      <strong>Disponible:</strong> CLP {(Number(proj.budget) - spent).toLocaleString('en-US')}
                     </p>
                   </div>
                   <button 

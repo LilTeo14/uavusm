@@ -51,8 +51,12 @@ export default function ProjectDetails({
   const projectTasks = tasks.filter(t => t.project_id === project.id);
   const projectNotes = notes.filter(n => n.project_id === project.id);
 
-  const totalSpent = projectMaterials
+  const totalApproved = projectMaterials
     .filter(m => m.status === 'approved' || m.status === 'purchased')
+    .reduce((sum, m) => sum + (Number(m.unit_price) * Number(m.quantity)), 0);
+
+  const totalSpent = projectMaterials
+    .filter(m => (m.status === 'approved' || m.status === 'purchased') && (m.purchase_status === 'pedido' || m.purchase_status === 'disponible'))
     .reduce((sum, m) => sum + (Number(m.unit_price) * Number(m.quantity)), 0);
 
   const totalPending = projectMaterials
@@ -502,9 +506,9 @@ export default function ProjectDetails({
           {/* Estado de Presupuesto */}
           <div style={{ marginTop: '1.25rem', background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
-              <span style={{ color: 'var(--text-secondary)' }}>Ejecución Presupuestaria</span>
+              <span style={{ color: 'var(--text-secondary)' }}>Ejecución Presupuestaria (Gastado)</span>
               <span style={{ fontWeight: 700 }}>
-                {budgetPercent}% (Gastado/Aprobado: CLP {totalSpent.toLocaleString('en-US')} de CLP {Number(project.budget).toLocaleString('en-US')})
+                {budgetPercent}% (CLP {totalSpent.toLocaleString('en-US')} de CLP {Number(project.budget).toLocaleString('en-US')})
               </span>
             </div>
             <div className="progress-bar-container" style={{ height: '8px' }}>
@@ -515,6 +519,10 @@ export default function ProjectDetails({
                   backgroundColor: budgetPercent > 90 ? 'var(--state-danger)' : budgetPercent > 70 ? 'var(--state-pending)' : 'var(--state-approved)'
                 }}
               ></div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginTop: '0.5rem', color: 'var(--text-muted)' }}>
+              <span>Total Aprobado: CLP {totalApproved.toLocaleString('en-US')}</span>
+              <span>Total Disponible: CLP {(Number(project.budget) - totalSpent).toLocaleString('en-US')}</span>
             </div>
             {totalPending > 0 && (
               <p style={{ fontSize: '0.75rem', color: 'var(--state-pending)', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>

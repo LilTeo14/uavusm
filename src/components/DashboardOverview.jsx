@@ -13,10 +13,18 @@ export default function DashboardOverview({ projects, materials, tasks, onSelect
   // --- CÁLCULOS DE MÉTRICAS ---
   const totalBudget = projects.reduce((sum, p) => sum + Number(p.budget), 0);
   
-  // Gastos aprobados o comprados
+  // Gastos aprobados o comprados (Total Aprobado)
   const approvedExpenses = materials
     .filter(m => m.status === 'approved' || m.status === 'purchased')
     .reduce((sum, m) => sum + (Number(m.unit_price) * Number(m.quantity)), 0);
+
+  // Gastos reales (Total Gastado: en estado de pedido "Pedido" o "Disponible")
+  const spentExpenses = materials
+    .filter(m => (m.status === 'approved' || m.status === 'purchased') && (m.purchase_status === 'pedido' || m.purchase_status === 'disponible'))
+    .reduce((sum, m) => sum + (Number(m.unit_price) * Number(m.quantity)), 0);
+
+  // Presupuesto disponible (Disponible = Presupuesto Total - Gastado)
+  const availableBudget = totalBudget - spentExpenses;
 
   // Gastos pendientes de aprobación
   const pendingExpenses = materials
@@ -31,32 +39,36 @@ export default function DashboardOverview({ projects, materials, tasks, onSelect
     : 0;
 
   // --- DATOS PARA GRÁFICOS ---
-  // 1. Gráfico de Barras: Presupuesto vs Gasto por Proyecto
+  // 1. Gráfico de Barras: Presupuesto vs Aprobado vs Gastado por Proyecto
   const barChartData = projects.map(p => {
     const projectMaterials = materials.filter(m => m.project_id === p.id);
-    const spent = projectMaterials
+    const approved = projectMaterials
       .filter(m => m.status === 'approved' || m.status === 'purchased')
+      .reduce((sum, m) => sum + (Number(m.unit_price) * Number(m.quantity)), 0);
+    const spent = projectMaterials
+      .filter(m => (m.status === 'approved' || m.status === 'purchased') && (m.purchase_status === 'pedido' || m.purchase_status === 'disponible'))
       .reduce((sum, m) => sum + (Number(m.unit_price) * Number(m.quantity)), 0);
 
     return {
       name: p.name,
       Presupuesto: Number(p.budget),
+      Aprobado: approved,
       Gastado: spent
     };
   });
 
-  // 2. Gráfico de Torta: Distribución del Gasto Aprobado por Proyecto
+  // 2. Gráfico de Torta: Distribución del Gasto Real por Proyecto
   const pieChartData = projects.map((p, index) => {
     const projectMaterials = materials.filter(m => m.project_id === p.id);
     const spent = projectMaterials
-      .filter(m => m.status === 'approved' || m.status === 'purchased')
+      .filter(m => (m.status === 'approved' || m.status === 'purchased') && (m.purchase_status === 'pedido' || m.purchase_status === 'disponible'))
       .reduce((sum, m) => sum + (Number(m.unit_price) * Number(m.quantity)), 0);
 
     return {
       name: p.name,
       value: spent
     };
-  }).filter(d => d.value > 0); // Solo mostrar proyectos con gastos
+  }).filter(d => d.value > 0); // Solo mostrar proyectos con gastos reales
 
   // Helper date formatter: formats "YYYY-MM-DD" to "July 31, 2026"
   const formatDate = (dateStr) => {
@@ -87,6 +99,7 @@ export default function DashboardOverview({ projects, materials, tasks, onSelect
     <div className="dashboard-overview">
       {/* Grid de Métricas Clave */}
       <div className="metrics-grid">
+        {/* 1. Presupuesto Total */}
         <div className="card metric-card">
           <div className="metric-icon-box">
             <Wallet size={24} />
@@ -97,18 +110,42 @@ export default function DashboardOverview({ projects, materials, tasks, onSelect
           </div>
         </div>
 
+        {/* 2. Total Gastado */}
+        <div className="card metric-card">
+          <div className="metric-icon-box orange">
+            <Wallet size={24} />
+          </div>
+          <div className="metric-info">
+            <span className="metric-value">CLP {spentExpenses.toLocaleString('en-US')}</span>
+            <span className="metric-label">Total Gastado</span>
+          </div>
+        </div>
+
+        {/* 3. Presupuesto Disponible */}
         <div className="card metric-card">
           <div className="metric-icon-box green">
             <Wallet size={24} />
           </div>
           <div className="metric-info">
-            <span className="metric-value">CLP {approvedExpenses.toLocaleString('en-US')}</span>
-            <span className="metric-label">Aprobado / Gastado</span>
+            <span className="metric-value">CLP {availableBudget.toLocaleString('en-US')}</span>
+            <span className="metric-label">Presupuesto Disponible</span>
           </div>
         </div>
 
+        {/* 4. Total Aprobado */}
         <div className="card metric-card">
-          <div className="metric-icon-box orange">
+          <div className="metric-icon-box">
+            <Wallet size={24} style={{ color: '#a855f7' }} />
+          </div>
+          <div className="metric-info">
+            <span className="metric-value">CLP {approvedExpenses.toLocaleString('en-US')}</span>
+            <span className="metric-label">Total Aprobado</span>
+          </div>
+        </div>
+
+        {/* 5. Pendiente Aprobación */}
+        <div className="card metric-card">
+          <div className="metric-icon-box orange" style={{ backgroundColor: 'rgba(234, 179, 8, 0.1)', color: 'var(--state-pending)', borderColor: 'rgba(234, 179, 8, 0.15)' }}>
             <AlertCircle size={24} />
           </div>
           <div className="metric-info">
@@ -117,6 +154,7 @@ export default function DashboardOverview({ projects, materials, tasks, onSelect
           </div>
         </div>
 
+        {/* 6. Tareas Completadas */}
         <div className="card metric-card">
           <div className="metric-icon-box">
             <CheckSquare size={24} />
@@ -133,7 +171,7 @@ export default function DashboardOverview({ projects, materials, tasks, onSelect
         {/* Presupuesto vs Gastos */}
         <div className="card">
           <div className="chart-header">
-            <h3 className="chart-title">Presupuesto Asignado vs. Gastos Reales (CLP)</h3>
+            <h3 className="chart-title">Presupuesto Asignado vs. Gastos (CLP)</h3>
           </div>
           <div style={{ width: '100%', height: 300 }}>
             <ResponsiveContainer>
@@ -147,7 +185,8 @@ export default function DashboardOverview({ projects, materials, tasks, onSelect
                 />
                 <Legend wrapperStyle={{ fontSize: 12, paddingTop: 10 }} />
                 <Bar dataKey="Presupuesto" fill="#0ea5e9" name="Presupuesto" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Gastado" fill="#f97316" name="Aprobado/Gastado" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Aprobado" fill="#a855f7" name="Aprobado" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Gastado" fill="#f97316" name="Gastado (Pedidos/Disp.)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -156,7 +195,7 @@ export default function DashboardOverview({ projects, materials, tasks, onSelect
         {/* Distribución del Gasto */}
         <div className="card">
           <div className="chart-header">
-            <h3 className="chart-title">Distribución de Gastos</h3>
+            <h3 className="chart-title">Distribución de Gastos Reales</h3>
           </div>
           <div style={{ width: '100%', height: 260, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             {pieChartData.length > 0 ? (
@@ -184,7 +223,7 @@ export default function DashboardOverview({ projects, materials, tasks, onSelect
             ) : (
               <div className="text-center" style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
                 <Wallet size={36} style={{ marginBottom: '0.75rem', opacity: 0.5 }} />
-                <p>No hay gastos aprobados aún.</p>
+                <p>No hay gastos reales aún.</p>
               </div>
             )}
             
@@ -301,8 +340,11 @@ export default function DashboardOverview({ projects, materials, tasks, onSelect
           <div className="projects-grid">
             {projects.map(project => {
               const projectMaterials = materials.filter(m => m.project_id === project.id);
-              const spent = projectMaterials
+              const approved = projectMaterials
                 .filter(m => m.status === 'approved' || m.status === 'purchased')
+                .reduce((sum, m) => sum + (Number(m.unit_price) * Number(m.quantity)), 0);
+              const spent = projectMaterials
+                .filter(m => (m.status === 'approved' || m.status === 'purchased') && (m.purchase_status === 'pedido' || m.purchase_status === 'disponible'))
                 .reduce((sum, m) => sum + (Number(m.unit_price) * Number(m.quantity)), 0);
               
               const projectTasks = tasks.filter(t => t.project_id === project.id);
@@ -353,6 +395,10 @@ export default function DashboardOverview({ projects, materials, tasks, onSelect
                             backgroundColor: budgetPercent > 90 ? 'var(--state-danger)' : budgetPercent > 70 ? 'var(--state-pending)' : 'var(--state-approved)'
                           }}
                         ></div>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginTop: '0.25rem', color: 'var(--text-muted)' }}>
+                        <span>Aprobado: CLP {approved.toLocaleString('en-US')}</span>
+                        <span>Disponible: CLP {(Number(project.budget) - spent).toLocaleString('en-US')}</span>
                       </div>
                     </div>
 
