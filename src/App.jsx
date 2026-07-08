@@ -165,7 +165,7 @@ export default function App() {
   const { title, subtitle } = getViewTitle();
 
   return (
-    <div className="app-container">
+    <div className={`app-container ${!isSidebarOpen ? 'sidebar-collapsed' : ''}`}>
       {/* Sidebar Navigation */}
       <aside className="sidebar" style={{ display: isSidebarOpen ? 'flex' : 'none' }}>
         <div className="brand-section">

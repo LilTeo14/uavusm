@@ -123,6 +123,10 @@ a:hover {
   min-height: 100vh;
 }
 
+.app-container.sidebar-collapsed {
+  grid-template-columns: 1fr;
+}
+
 /* Sidebar */
 .sidebar {
   background-color: var(--bg-secondary);
