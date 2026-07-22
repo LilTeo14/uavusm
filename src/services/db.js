@@ -403,27 +403,29 @@ Este documento contiene el desglose físico de los materiales necesarios para la
 | :--- | :--- | :--- | :---: | :---: | :---: |
 | **A. Pórticos de Carrera** *(4 Unidades)* | • Tubo PVC 25 mm × 6 m<br>• Fierro construcción 10 mm<br>• Tela TNT (Friselina brillante) | Arco estructural flexible<br>Para cortar 8 estacas (60 cm)<br>Vestido visible de arcos (tiras) | 4 u<br>1 u<br>4 m | $3.790<br>$5.000<br>$1.500 | $15.160<br>$5.000<br>$6.000 |
 | | *Subtotal Pórticos* | | | | **$26.160** |
-| **B. Postes de Slalom** *(5 Unidades)* | • Tubo PVC 25 mm × 6 m<br>• Fierro construcción 10 mm<br>• Fideos flotadores de espuma | Mástiles de 2 m (sobra 1 tramo)<br>Para cortar 5 estacas (60 cm)<br>Protector para golpes de hélice | 2 u<br>0.5 u<br>5 u | $3.790<br>$5.000<br>$2.000 | $7.580<br>$2.500<br>$10.000 |
-| | *Subtotal Slalom* | | | | **$20.080** |
+| **B. Postes de Slalom** *(6 Unidades)* | • Tubo PVC 25 mm × 6 m<br>• Fierro construcción 10 mm<br>• Fideos flotadores de espuma | Mástiles de 2 m (sobra 1 tramo)<br>Para cortar 6 estacas (60 cm)<br>Protector para golpes de hélice | 2 u<br>0.5 u<br>6 u | $3.790<br>$5.000<br>$2.000 | $7.580<br>$2.500<br>$12.000 |
+| | *Subtotal Slalom* | | | | **$22.080** |
 | **C. Túnel de Velocidad** *(1 Unidad - 4m largo)* | • Tubo PVC 25 mm × 6 m<br>• Fierro construcción 10 mm<br>• Plástico agrícola negro (4 m ancho) | Arcos de soporte del túnel<br>Para cortar 6 estacas (60 cm)<br>Cubierta inmersiva del túnel | 3 u<br>1 u<br>6 m | $3.790<br>$5.000<br>$2.500 | $11.370<br>$5.000<br>$15.000 |
 | | *Subtotal Túnel* | | | | **$31.370** |
 | **D. Landing Pad** *(1 Unidad)* | • Parasol redondo de auto<br>• Spray Rust-Oleum (Naranjo Flúor) | Base reflectante (≈ 80 cm)<br>Pintura de alta visibilidad | 1 u<br>1 u | $4.500<br>$6.500 | $4.500<br>$6.500 |
 | | *Subtotal Landing Pad* | | | | **$11.000** |
-| **E. Colimador** *(3 Unidades)* | • Baldes plásticos de 20 Litros<br>• Spray acrílico (Negro Mate) | Carcasas para códigos QR<br>Evita reflejos de luz interior | 3 u<br>1 u | $3.500<br>$4.500 | $10.500<br>$4.500 |
-| | *Subtotal Colimadores* | | | | **$15.000** |
+| **E. Colimador** *(4 Unidades)* | • Baldes plásticos de 20 Litros<br>• Spray acrílico (Negro Mate) | Carcasas para códigos QR<br>Evita reflejos de luz interior | 4 u<br>1 u | $3.500<br>$4.500 | $14.000<br>$4.500 |
+| | *Subtotal Colimadores* | | | | **$18.500** |
 | **F. Banderas de Giro** *(4 Unidades)* | • Tubo PVC 25 mm × 6 m<br>• Fierro construcción 10 mm<br>• Tela TNT (Color contrastante) | Mástiles de 3 m (cortados a la mitad)<br>Para cortar 4 estacas (60 cm)<br>Vela triangular de giro | 2 u<br>0.5 u<br>2 m | $3.790<br>$5.000<br>$1.500 | $7.580<br>$2.500<br>$3.000 |
 | | *Subtotal Banderas* | | | | **$13.080** |
 | **G. Toldo e Infraestructura** *(Sujeción general)* | • Toldo plegable básico 3 × 3 m<br>• Alambre de amarre blando (Rollo)<br>• Amarras plásticas (Zipties x100)<br>• Cinta de embalar transparente | Protección para piloto y equipos<br>Asegurar uniones de estructuras<br>Fijaciones rápidas de elementos<br>Impermeabilizar códigos QR | 1 u<br>1 u<br>1 u<br>1 u | $34.990<br>$4.000<br>$3.500<br>$2.000 | $34.990<br>$4.000<br>$3.500<br>$2.000 |
 | | *Subtotal Infraestructura* | | | | **$44.490** |
-| **TOTAL MATERIALES** | **Monto total estimado para la pista** | | | | **$156.180** |
-| **RESERVA DE SEGURIDAD** | **Fondo para variaciones e imprevistos** | | | | **$43.820** |
+| **H. Delimitación de Curvas** *(1 set)* | • Conos de plástico / Tachuelas | Marcadores de curvas terrestres en la zona de velocidad | 1 u | $5.000 | $5.000 |
+| | *Subtotal Delimitación* | | | | **$5.000** |
+| **TOTAL MATERIALES** | **Monto total estimado para la pista** | | | | **$171.680** |
+| **RESERVA DE SEGURIDAD** | **Fondo para variaciones e imprevistos** | | | | **$28.320** |
 | **PRESUPUESTO MÁXIMO** | **Límite de Gasto Establecido** | | | | **$200.000** |
 
 ## Notas de Compra y Rendimiento de Materiales:
 
-1. **Tubos de PVC (25 mm):** Comprando **11 unidades** de **6 m** (según el precio de image_191d22.png) cubren exactamente los **4 pórticos**, **5 postes de slalom**, los **3 arcos** del túnel y las **4 banderas de giro**, con un tramo de **2 m** de PVC de repuesto.
-2. **Fierros de construcción (10 mm):** Con un total de **3 barras** de **6 m** se consiguen cortar exactamente las **23 estacas** de **60 cm** necesarias para anclar toda la pista.
-3. **Fondo de Reserva:** Les quedan libres **$43.820 CLP** para absorber pequeñas variaciones de precios en el retail o comprar rollos de cinta adhesiva adicionales si hiciera falta.`,
+1. **Tubos de PVC (25 mm):** Comprando **11 unidades** de **6 m** (según el precio de image_191d22.png) cubren exactamente los **4 pórticos**, **6 postes de slalom** (con descarte mínimo), los **3 arcos** del túnel y las **4 banderas de giro**, con un tramo de **2 m** de PVC de repuesto.
+2. **Fierros de construcción (10 mm):** Con un total de **3 barras** de **6 m** se consiguen cortar exactamente las **24 estacas** de **60 cm** necesarias para anclar toda la pista.
+3. **Fondo de Reserva:** Les quedan libres **$28.320 CLP** para absorber pequeñas variaciones de precios en el retail o comprar rollos de cinta adhesiva adicionales si hiciera falta.`,
     file_url: null,
     created_at: new Date().toISOString()
   },
@@ -439,50 +441,111 @@ Este documento detalla la planificación, el diseño de obstáculos y la logíst
 
 Al tratarse de un circuito de pilotos para pilotos, buscamos máxima diversión técnica con materiales sencillos de conseguir en el retail de construcción (ferretería local).
 
-### Distribución General Recomendada:
+### Flujo Oficial del Recorrido:
 
-1. **Plataforma de Lanzamiento (Take-off Pad):** Ubicada junto al toldo de control (que sirve para evitar que el sol directo interfiera con las gafas de los pilotos).
-2. **Pórticos de Paso (Gates 1, 2 y 3):** Construidos en arco de PVC con cobertura visual de cinta plástica o tela TNT de color brillante. El pórtico central sostiene el **primer dispositivo QR de control**.
-3. **Zona de Slalom (Postes de precisión):** Estructuras flexibles de PVC revestidas de fideos flotadores de piscina. El poste central sostiene el **segundo dispositivo QR de control**.
-4. **Túnel de Velocidad DIY:** Estructura de arcos de PVC cubierta con plástico agrícola negro o malla de sombreo, donde se localiza el **tercer dispositivo QR de control**.
-5. **Pórtico de Meta (Gate 4):** Indica el ingreso a la recta final de la carrera.
-6. **Landing Pad de Precisión:** Un tapasol de auto redondo pintado de color reflectante donde el piloto debe aterrizar para detener el tiempo.
+1. **Plataforma de Despegue (Take-off Pad):** Ubicada junto al toldo de control. El cronómetro comienza a correr de manera automática al despegar.
+2. **Pórtico de Partida (Gate 1):** Primer arco que atraviesa el dron inmediatamente después del despegue para encarar el circuito.
+3. **Zona de Slalom y Precisión:** Estructuras de PVC flexibles con fideos flotadores de piscina. Consta de 6 postes en total. El piloto avanza zigzaguenado los primeros 3 postes, escanea el **primer código QR (QR 1 - Slalom)** dentro del balde colimador, y completa el zigzag con los siguientes 3 postes.
+4. **Pórtico de Altura (Gate 2):** Marca el ingreso a la zona de maniobras verticales.
+5. **Zona de Altura:** El piloto debe realizar un ascenso controlado para escanear el **segundo código QR (QR 2 - Altitud)** ubicado en una posición elevada (colimador elevado sobre soporte o mástil), para luego descender inmediatamente.
+6. **Pórtico de Salida de Altura (Gate 3):** Marca el retorno del piloto a nivel del suelo.
+7. **Zona de Velocidad en Curvas:** El piloto acelera siguiendo las tachuelas o marcas en el suelo que indican una serie de curvas rápidas terrestres. En esta zona escanea el **tercer código QR (QR 3 - Curvas)** situado en el suelo.
+8. **Pórtico del Túnel (Gate 4):** Marca el ingreso al tramo cerrado final.
+9. **Túnel de Velocidad DIY:** Estructura de arcos de PVC cubierta con plástico negro que simula un túnel oscuro. A mitad del túnel se localiza el **cuarto código QR (QR 4 - Túnel)**.
+10. **Landing Pad de Aterrizaje:** Ubicado al salir del túnel. El tiempo se detiene inmediatamente al asentar de forma estable las hélices en el pad.
 
 ## 2. Componentes de la Pista y Construcción Casera
 
 ### A. Pórticos de Carrera (Gates) - 4 unidades
 *   **Estructura base:** 2 tubos de PVC conduit de **20 mm × 3 m** por cada pórtico, unidos al centro para formar un gran arco flexible de **6 metros** de longitud total.
 *   **Anclaje:** Se entierran estacas de fierro de construcción (**8 mm o 10 mm**) en la tierra, y los extremos de los tubos de PVC se introducen en ellas.
-*   **Visibilidad (Sin telas costosas):** Se envuelve el PVC con cinta de peligro (amarilla/negra) o con tiras de tela TNT (friselina) color naranjo o rojo brillante sujetas con cinta adhesiva.
+*   **Visibilidad:** Se envuelve el PVC con cinta de peligro (amarilla/negra) o con tiras de tela TNT brillante.
 
-### B. Postes de Slalom - 5 unidades
+### B. Postes de Slalom - 6 unidades
 *   **Estructura base:** 1 tubo de PVC de **20 mm** por poste, fijado al suelo con estacas de fierro.
-*   **Protección contra impactos:** Se forra cada poste con un fideo flotador de espuma para piscina de alta visibilidad (protege las hélices de los drones ante colisiones).
+*   **Protección contra impactos:** Se forra cada poste con un fideo flotador de espuma para piscina.
 
 ### C. Túnel FPV DIY - 1 unidad
 *   **Estructura:** 3 arcos de PVC conduit fijados al suelo con estacas.
-*   **Cubierta:** Plástico negro de invernadero, polietileno agrícola o malla rachel de sombreo económica sujeta con amarras plásticas (*zipties*), formando un túnel inmersivo de **4 metros** de largo.
+*   **Cubierta:** Plástico negro de invernadero o malla de sombreo formando un túnel inmersivo de **4 metros** de largo.
 
 ### D. Banderas de Giro (Flags) - 4 unidades
-*   **Construcción:** Mástiles hechos con tubos de PVC conduit o coligües (bambú local) de **3 metros** de altura.
-*   **Vela:** Tela TNT de color de descarte cortada en forma de pluma y pegada al mástil con cinta de embalar.
+*   **Construcción:** Mástiles hechos con tubos de PVC de **3 metros** con velas de tela TNT cortadas en forma de pluma.
 
 ### E. Landing Pad de Aterrizaje
-*   **Construcción:** Un parasol redondo para auto (tapasol plateado) de **80 cm** de diámetro, pintado con spray de color naranjo flúor con una gran "H" en el centro.
+*   **Construcción:** Un parasol redondo para auto de **80 cm** de diámetro pintado de naranjo flúor con una gran "H" al centro.
+
+### F. Colimadores (Tarros QR) - 4 unidades
+*   **Construcción:** Baldes plásticos de **20 litros** pintados interiormente con negro mate. Uno de ellos se monta en una estructura elevada para la zona de altura.
+
+### G. Delimitación de Curvas
+*   **Construcción:** Conos plásticos de entrenamiento o tachuelas de alta visibilidad para trazar la línea de vuelo en el suelo.
 
 ## 3. Dinámica de Validación por Códigos QR con Tarros Caseros
 
 Mantener esta mecánica es muy sencillo y no requiere gastos tecnológicos:
-*   **Los Colimadores (Tarros QR):** Usaremos baldes plásticos de pintura o construcción de **20 litros** (fáciles de reciclar o de conseguir muy baratos). Se pinta el interior con pintura spray negro mate para evitar reflejos de sol.
-*   **Los Códigos QR:** Se imprimen en cualquier impresora casera sobre papel común de oficina, se recortan y se protegen pegándoles cinta de embalaje transparente por ambos lados (para protegerlos de la humedad). Luego se pegan al fondo del balde.
-*   **Regla de Validación:** Al finalizar el vuelo, el piloto busca en su video grabado (DVR) de las gafas FPV los fotogramas donde pasa frente a los tarros, pausa el video y escanea los códigos QR con su celular para validar su circuito. Si falta un código QR, se aplica una penalización de **+15 segundos** en el cronómetro.
+*   **Los Colimadores (Tarros QR):** Usaremos baldes plásticos para bloquear la luz solar directa. Se pega el código QR en el fondo.
+*   **Regla de Validación:** Al finalizar el vuelo, el piloto busca en su video grabado (DVR) de las gafas FPV los fotogramas donde pasa frente a los 4 tarros QR, pausa el video y los escanea con su celular para validar su circuito. Si falta un código QR, se aplica una penalización de **+15 segundos** en el cronómetro por cada uno ausente.
 
 ## 4. Protocolo de Cronometraje Manual (1 Solo Juez)
 
-Al ser una carrera recreativa entre amigos, un piloto que no esté compitiendo en el turno actual actuará como el juez de pista del piloto en vuelo:
-1. **Salida:** El juez da la orden de despegue y activa el cronómetro de su propio celular.
-2. **Meta:** El cronómetro se detiene en seco cuando el dron del piloto aterriza y asienta sus hélices en el Landing Pad de manera estable.
-3. **Puntuación:** Los tiempos se anotan directamente en una hoja de cuaderno o block de notas.`,
+Al ser una carrera recreativa entre amigos, un piloto que no esté compitiendo en el turno actual actuará como el juez de pista:
+1. **Salida:** El juez da la orden de despegue y el tiempo se inicia en el instante del despegue.
+2. **Meta:** El cronómetro se detiene en seco cuando el dron aterriza de manera estable en el Landing Pad.
+3. **Puntuación:** Los tiempos se registran y se aplican las penalizaciones según los QRs validados en el DVR.`,
+    file_url: null,
+    created_at: new Date().toISOString()
+  },
+  {
+    id: 'e5555555-5555-5555-5555-555555555553',
+    project_id: 'd5555555-5555-5555-5555-555555555555',
+    title: 'Presentación del Evento: Experiencia y Dinámica de la Pista de Drones FPV',
+    content: `# Presentación del Evento: Experiencia y Dinámica de la Pista de Drones FPV
+
+Esta presentación detalla la experiencia del circuito de carrera de drones en primera persona (FPV) diseñado para eventos, demostraciones y competencias de precisión. Los participantes y espectadores experimentarán la adrenalina del vuelo a alta velocidad mediante un formato de contrarreloj individual, donde la destreza y la precisión de los pilotos son los factores clave.
+
+## 1. Diseño y Distribución de la Pista
+
+La pista está diseñada con un flujo continuo y dinámico que desafía diferentes habilidades de pilotaje (precisión, control de altura, velocidad y vuelo a ciegas). La distribución oficial del circuito consta de los siguientes sectores en orden de recorrido:
+
+1. **Plataforma de Despegue (Take-off Pad):** Punto de partida desde donde el piloto inicia el vuelo y comienza a correr el tiempo oficialmente.
+2. **Pórtico de Partida (Gate 1):** El primer arco de paso que marca el inicio del recorrido cronometrado tras el despegue.
+3. **Zona de Slalom y Precisión:** Una secuencia de seis postes verticales. El piloto debe realizar un zigzag de precisión:
+   - Supera los primeros 3 postes de slalom.
+   - Escanea el **Primer Punto de Control QR (QR 1 - Slalom)**.
+   - Completa los siguientes 3 postes de slalom.
+4. **Pórtico de Altura (Gate 2):** Un arco de paso que delimita el ingreso a la sección de maniobra vertical.
+5. **Zona de Altitud y Control Vertical:** El piloto debe ascender verticalmente para realizar una lectura aérea:
+   - Escanea el **Segundo Punto de Control QR (QR 2 - Altura)**, ubicado en una zona elevada.
+   - Desciende controladamente para alinear al suelo.
+6. **Pórtico de Salida de Altura (Gate 3):** Un arco que marca la salida de la zona elevada y entrada a la sección terrestre.
+7. **Zona de Velocidad y Curvas:** Un tramo terrestre rápido con curvas marcadas con indicadores en el suelo (tachuelas), donde el piloto debe seguir la trayectoria y:
+   - Escanea el **Tercer Punto de Control QR (QR 3 - Curvas)** en el suelo.
+8. **Pórtico del Túnel (Gate 4):** El arco de acceso que introduce al piloto al tramo final cerrado.
+9. **Túnel Inmersivo:** Un tramo cubierto que desafía la visibilidad FPV, el cual incluye:
+   - El **Cuarto Punto de Control QR (QR 4 - Túnel)** ubicado en el punto medio del túnel.
+10. **Plataforma de Aterrizaje de Precisión (Landing Pad):** Ubicada inmediatamente a la salida del túnel. El tiempo se detiene en el instante exacto en que el dron realiza un contacto estable en esta plataforma.
+
+---
+
+## 2. Dinámica de Validación por Códigos QR (Sistema de Puntos de Control)
+
+Para asegurar que todos los pilotos completen el recorrido oficial sin omitir ninguna zona, la pista cuenta con un sistema de verificación visual interactivo:
+
+* **Puntos de Control QR:** Se disponen 4 dispositivos ópticos especiales en ubicaciones estratégicas a lo largo del circuito (Slalom, Altura, Curvas y Túnel).
+* **Verificación de Vuelo:** Durante el recorrido, la cámara a bordo del dron registra el trayecto. Al finalizar, se verifica que la grabación contenga los fotogramas del paso por cada uno de los 4 puntos de control.
+* **Penalizaciones:** En caso de omitir o no registrar el paso por alguno de los puntos de control QR, se aplicará una penalización automática de **+15 segundos** al tiempo final del piloto por cada punto omitido. Esto garantiza el juego limpio y recompensa la precisión sobre la velocidad desmedida.
+
+---
+
+## 3. Dinámica de Cronometraje y Puntuación
+
+La competencia sigue un formato de contrarreloj individual ágil y transparente:
+
+1. **Procedimiento de Salida:** El tiempo comienza a correr de manera automática en el instante del despegue desde la Plataforma de Despegue.
+2. **Registro de Tiempo:** El tiempo corre de forma continua mientras el dron esté en el aire sorteando la secuencia de pórticos y zonas.
+3. **Procedimiento de Meta:** El cronómetro se detiene en el instante exacto en que el dron realiza un aterrizaje estable sobre la Plataforma de Aterrizaje a la salida del túnel.
+4. **Resultados:** El tiempo de vuelo obtenido se complementa con las validaciones de los 4 códigos QR. El piloto con el menor tiempo total (tiempo registrado más penalizaciones, si las hubiera) liderará la tabla de posiciones del evento.`,
     file_url: null,
     created_at: new Date().toISOString()
   }

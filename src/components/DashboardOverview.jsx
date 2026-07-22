@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  PieChart, Pie, Cell
+  PieChart, Pie, Cell, Tooltip, ResponsiveContainer
 } from 'recharts';
 import { Wallet, CheckSquare, Clock, AlertCircle, ArrowRight, LayoutGrid, Table, FileText, Calendar, User } from 'lucide-react';
 
@@ -39,23 +38,19 @@ export default function DashboardOverview({ projects, materials, tasks, onSelect
     : 0;
 
   // --- DATOS PARA GRÁFICOS ---
-  // 1. Gráfico de Barras: Presupuesto vs Aprobado vs Gastado por Proyecto
-  const barChartData = projects.map(p => {
+  // 1. Gráfico de Torta: Presupuesto Disponible por Proyecto
+  const availableBudgetPieData = projects.map(p => {
     const projectMaterials = materials.filter(m => m.project_id === p.id);
-    const approved = projectMaterials
-      .filter(m => m.status === 'approved' || m.status === 'purchased')
-      .reduce((sum, m) => sum + (Number(m.unit_price) * Number(m.quantity)), 0);
     const spent = projectMaterials
       .filter(m => (m.status === 'approved' || m.status === 'purchased') && (m.purchase_status === 'pedido' || m.purchase_status === 'disponible'))
       .reduce((sum, m) => sum + (Number(m.unit_price) * Number(m.quantity)), 0);
+    const available = Math.max(0, Number(p.budget) - spent);
 
     return {
       name: p.name,
-      Presupuesto: Number(p.budget),
-      Aprobado: approved,
-      Gastado: spent
+      value: available
     };
-  });
+  }).filter(d => d.value > 0);
 
   // 2. Gráfico de Torta: Distribución del Gasto Real por Proyecto
   const pieChartData = projects.map((p, index) => {
@@ -168,27 +163,55 @@ export default function DashboardOverview({ projects, materials, tasks, onSelect
 
       {/* Gráficos Estadísticos */}
       <div className="dashboard-grid-charts">
-        {/* Presupuesto vs Gastos */}
+        {/* Presupuesto disponible por proyecto */}
         <div className="card">
-          <div className="chart-header">
-            <h3 className="chart-title">Presupuesto Asignado vs. Gastos (CLP)</h3>
+          <div className="chart-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <div>
+              <h3 className="chart-title">Presupuesto disponible por proyecto</h3>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                Total disponible: <strong style={{ color: 'var(--state-approved)' }}>CLP {availableBudget.toLocaleString('en-US')}</strong>
+              </span>
+            </div>
           </div>
-          <div style={{ width: '100%', height: 300 }}>
-            <ResponsiveContainer>
-              <BarChart data={barChartData} margin={{ top: 20, right: 30, left: 10, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2a354f" />
-                <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} />
-                <YAxis stroke="#94a3b8" fontSize={11} />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#121826', borderColor: '#2e3d5c', color: '#f8fafc' }}
-                  formatter={(value) => [`CLP ${Number(value).toLocaleString('en-US')}`, '']}
-                />
-                <Legend wrapperStyle={{ fontSize: 12, paddingTop: 10 }} />
-                <Bar dataKey="Presupuesto" fill="#0ea5e9" name="Presupuesto" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Aprobado" fill="#a855f7" name="Aprobado" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Gastado" fill="#f97316" name="Gastado (Pedidos/Disp.)" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+          <div style={{ width: '100%', height: 260, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            {availableBudgetPieData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={availableBudgetPieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={55}
+                    outerRadius={75}
+                    paddingAngle={4}
+                    dataKey="value"
+                  >
+                    {availableBudgetPieData.map((entry, index) => (
+                      <Cell key={`cell-avail-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#121826', borderColor: '#2e3d5c', color: '#f8fafc' }}
+                    formatter={(value) => [`CLP ${Number(value).toLocaleString('en-US')}`, 'Disponible']}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="text-center" style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                <Wallet size={36} style={{ marginBottom: '0.75rem', opacity: 0.5 }} />
+                <p>No hay presupuesto disponible.</p>
+              </div>
+            )}
+            
+            {/* Leyenda Personalizada para Torta */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1rem', justifyContent: 'center', marginTop: '0.5rem', fontSize: '0.75rem' }}>
+              {availableBudgetPieData.map((entry, index) => (
+                <div key={entry.name} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: COLORS[index % COLORS.length] }}></span>
+                  <span style={{ color: 'var(--text-secondary)' }}>{entry.name}: <strong>CLP {entry.value.toLocaleString('en-US')}</strong></span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 

@@ -1,17 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, Folder, ShieldAlert, Wifi, WifiOff, 
-  Menu, X, RefreshCw, HelpCircle 
+  Menu, X, RefreshCw, HelpCircle, Image
 } from 'lucide-react';
 import { dbService, supabase } from './services/db';
 import DashboardOverview from './components/DashboardOverview';
 import ProjectDetails from './components/ProjectDetails';
 import AdminConsole from './components/AdminConsole';
+import AboutModal from './components/AboutModal';
 
 export default function App() {
   // Navigation State
   const [activeView, setActiveView] = useState('overview'); // 'overview' | 'project' | 'admin'
   const [selectedProjectId, setSelectedProjectId] = useState(null);
+  
+  // About Us Modal State
+  const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
   
   // Data State
   const [projects, setProjects] = useState([]);
@@ -168,10 +172,56 @@ export default function App() {
     <div className={`app-container ${!isSidebarOpen ? 'sidebar-collapsed' : ''}`}>
       {/* Sidebar Navigation */}
       <aside className="sidebar" style={{ display: isSidebarOpen ? 'flex' : 'none' }}>
-        <div className="brand-section">
+        <div className="brand-section" style={{ marginBottom: '1rem' }}>
           <span className="brand-logo">✈️</span>
           <span className="brand-title">UAVUSM</span>
         </div>
+        <button 
+          onClick={() => setIsAboutModalOpen(true)} 
+          className="btn btn-secondary btn-sm" 
+          style={{ 
+            marginBottom: '0.5rem', 
+            width: '100%', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            gap: '0.5rem',
+            fontSize: '0.8rem',
+            padding: '0.5rem 0.8rem',
+            border: '1px solid var(--border-color)',
+            borderRadius: '8px',
+            cursor: 'pointer'
+          }}
+          title="Conoce nuestra historia y proyectos"
+        >
+          <HelpCircle size={14} style={{ color: 'var(--accent-primary)' }} />
+          <span style={{ fontWeight: 600 }}>Acerca de UAVUSM</span>
+        </button>
+        <a 
+          href="https://drive.google.com/drive/folders/1iFUKdU15_0uvApBpM8zE9iU4rGqrWMbM?usp=sharing"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn btn-secondary btn-sm" 
+          style={{ 
+            marginBottom: '1.75rem', 
+            width: '100%', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            gap: '0.5rem',
+            fontSize: '0.8rem',
+            padding: '0.5rem 0.8rem',
+            border: '1px solid var(--border-color)',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            textDecoration: 'none',
+            color: 'inherit'
+          }}
+          title="Ver galería multimedia en Google Drive"
+        >
+          <Image size={14} style={{ color: 'var(--accent-secondary)' }} />
+          <span style={{ fontWeight: 600 }}>Multimedia</span>
+        </a>
 
         <nav className="sidebar-menu">
           <span className="sidebar-heading">Iniciativa</span>
@@ -237,6 +287,14 @@ export default function App() {
 
           <div className="actions-section">
             <button 
+              onClick={() => setIsAboutModalOpen(true)} 
+              className="btn btn-secondary btn-icon" 
+              style={{ borderRadius: '8px' }}
+              title="Acerca de UAVUSM"
+            >
+              <HelpCircle size={16} />
+            </button>
+            <button 
               onClick={fetchData} 
               className={`btn btn-secondary btn-icon ${loading ? 'pulse-dot' : ''}`} 
               style={{ borderRadius: '8px' }}
@@ -266,6 +324,12 @@ export default function App() {
           {renderViewContent()}
         </div>
       </main>
+
+      <AboutModal 
+        isOpen={isAboutModalOpen} 
+        onClose={() => setIsAboutModalOpen(false)} 
+        projects={projects} 
+      />
     </div>
   );
 }
