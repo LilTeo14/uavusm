@@ -98,6 +98,17 @@ export default function AboutModal({ isOpen, onClose, projects = [] }) {
                 El ecosistema nacional de drones comenzó a expandirse aceleradamente. En uno de nuestros encuentros de vinculación industrial, logramos conectar con la empresa <strong>Skydrone</strong>. Fascinados por el talento e ingenio del equipo estudiantil, decidieron patrocinarnos, convirtiéndose en nuestro pilar de apoyo estratégico, técnico y económico, permitiéndonos proyectar el desarrollo hacia niveles industriales.
               </p>
             </div>
+            {/* Timeline Item 4 */}
+            <div className="about-timeline-item" style={{ borderColor: 'var(--state-approved)' }}>
+              <div className="about-timeline-dot" style={{ backgroundColor: 'var(--state-approved)' }}></div>
+              <div className="about-timeline-header">
+                <span className="about-timeline-year" style={{ color: 'var(--state-approved)' }}>Septiembre 2026</span>
+                <span className="about-timeline-subtitle">Hito Expo Seguridad & Inicio de Nuevas Versiones</span>
+              </div>
+              <p className="about-timeline-content">
+                Tras meses de intensa fabricación y pruebas en terreno, presentamos nuestros primeros prototipos funcionales (Skybetol, Skycopter y Skydoc) en la <strong>Expo Seguridad 2026</strong> (8 al 10 de Septiembre), logrando una recepción excepcional por parte de la industria y autoridades. Con este hito culminado, dimos inicio a la <strong>Etapa 2</strong>: desarrollo de las versiones v2 y el nuevo avión impreso en 3D.
+              </p>
+            </div>
           </div>
 
           {/* Strategic Alliance Callout */}
@@ -115,13 +126,13 @@ export default function AboutModal({ isOpen, onClose, projects = [] }) {
             </div>
           </div>
 
-          {/* Section 2: Current Projects */}
+          {/* Section 2: Projects Ecosystem */}
           <h3 className="about-section-title" style={{ marginTop: '2.5rem' }}>
             <Users size={18} />
-            <span>Nuestros 5 Proyectos Activos</span>
+            <span>Ecosistema de Proyectos UAVUSM</span>
           </h3>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', lineHeight: '1.45' }}>
-            Actualmente nos organizamos en células de trabajo multidisciplinarias para sacar adelante las cinco aristas clave de nuestro ecosistema tecnológico actual:
+            Actualmente nos organizamos en células multidisciplinarias para sacar adelante las iniciativas activas y las nuevas iteraciones de nuestro ecosistema tecnológico:
           </p>
 
           <div className="about-projects-grid">

@@ -1,13 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, Folder, ShieldAlert, Wifi, WifiOff, 
-  Menu, X, RefreshCw, HelpCircle, Image
+  Menu, X, RefreshCw, HelpCircle, Image, CheckCircle2,
+  Sparkles, Shield, Calendar, GitBranch, LayoutGrid, Wallet,
+  CalendarRange, Receipt
 } from 'lucide-react';
 import { dbService, supabase } from './services/db';
+import { getTeamMember } from './services/team';
 import DashboardOverview from './components/DashboardOverview';
 import ProjectDetails from './components/ProjectDetails';
 import AdminConsole from './components/AdminConsole';
 import AboutModal from './components/AboutModal';
+import ProfileSelector from './components/ProfileSelector';
+import MateoSpace from './components/MateoSpace';
+import PinModal from './components/PinModal';
+import ProjectsFundsOverview from './components/ProjectsFundsOverview';
+import AvailabilityView from './components/AvailabilityView';
+import RendicionesView from './components/RendicionesView';
+import ErrorBoundary from './components/ErrorBoundary';
 
 export default function App() {
   // Navigation State
@@ -35,6 +45,71 @@ export default function App() {
     sessionStorage.setItem('uavusm_admin_session', val ? 'true' : 'false');
   };
 
+  // User Profile State ('guest' | 'mateo' | memberId)
+  const [currentProfile, setCurrentProfile] = useState(() => {
+    return localStorage.getItem('uavusm_current_profile') || 'guest';
+  });
+
+  // Authenticated user in this session
+  const [authenticatedUser, setAuthenticatedUser] = useState(() => {
+    return sessionStorage.getItem('uavusm_auth_user') || (sessionStorage.getItem('uavusm_admin_session') === 'true' ? 'mateo' : null);
+  });
+
+  // Auth Modal State (supports login & first-time creation for any member)
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authTargetMember, setAuthTargetMember] = useState(null);
+
+  const handleOpenAuthModal = (member) => {
+    setAuthTargetMember(member || getTeamMember('mateo'));
+    setIsAuthModalOpen(true);
+  };
+
+  const handleSelectProfile = (profileId) => {
+    if (profileId === 'guest') {
+      handleSetIsAdmin(false);
+      setAuthenticatedUser(null);
+      sessionStorage.removeItem('uavusm_auth_user');
+      setCurrentProfile('guest');
+      localStorage.setItem('uavusm_current_profile', 'guest');
+      if (activeView === 'mateo' || activeView === 'admin') {
+        setActiveView('overview');
+      }
+      return;
+    }
+
+    setCurrentProfile(profileId);
+    localStorage.setItem('uavusm_current_profile', profileId);
+  };
+
+  const handleAuthSuccess = (member) => {
+    setIsAuthModalOpen(false);
+    const memberId = member?.id || 'mateo';
+    setAuthenticatedUser(memberId);
+    sessionStorage.setItem('uavusm_auth_user', memberId);
+
+    if (memberId === 'mateo') {
+      handleSetIsAdmin(true);
+      setCurrentProfile('mateo');
+      localStorage.setItem('uavusm_current_profile', 'mateo');
+      setActiveView('mateo');
+    } else {
+      handleSetIsAdmin(false);
+      setCurrentProfile(memberId);
+      localStorage.setItem('uavusm_current_profile', memberId);
+    }
+  };
+
+  const handleLogout = () => {
+    handleSetIsAdmin(false);
+    setAuthenticatedUser(null);
+    sessionStorage.removeItem('uavusm_auth_user');
+    setCurrentProfile('guest');
+    localStorage.setItem('uavusm_current_profile', 'guest');
+    if (activeView === 'mateo' || activeView === 'admin') {
+      setActiveView('overview');
+    }
+  };
+
   // Responsive Sidebar State
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
@@ -47,6 +122,7 @@ export default function App() {
       setLoading(true);
       setError(null);
       
+      await dbService.syncCredentialsFromCloud();
       const projs = await dbService.getProjects();
       const mats = await dbService.getMaterials();
       const tsks = await dbService.getTasks();
@@ -127,6 +203,16 @@ export default function App() {
             materials={materials}
             tasks={tasks}
             onSelectProject={handleSelectProject}
+            onNavigate={handleNavigate}
+          />
+        );
+      case 'projects_overview':
+        return (
+          <ProjectsFundsOverview 
+            projects={projects}
+            materials={materials}
+            tasks={tasks}
+            onSelectProject={handleSelectProject}
           />
         );
       case 'project':
@@ -153,6 +239,34 @@ export default function App() {
             setIsAdmin={handleSetIsAdmin}
           />
         );
+      case 'mateo':
+        return (
+          <MateoSpace 
+            projects={projects}
+            tasks={tasks}
+            materials={materials}
+            onNavigate={handleNavigate}
+            onSelectProject={handleSelectProject}
+            onLogout={handleLogout}
+          />
+        );
+      case 'availability':
+        return (
+          <AvailabilityView 
+            currentProfile={currentProfile}
+            isAdmin={isAdmin}
+          />
+        );
+      case 'rendiciones':
+        return (
+          <RendicionesView 
+            currentProfile={currentProfile}
+            isAdmin={isAdmin}
+            authenticatedUser={authenticatedUser}
+            onNavigate={handleNavigate}
+            onOpenAuthModal={handleOpenAuthModal}
+          />
+        );
       default:
         return <p>Vista no encontrada</p>;
     }
@@ -160,7 +274,11 @@ export default function App() {
 
   // Get view title helper
   const getViewTitle = () => {
-    if (activeView === 'overview') return { title: 'Dashboard General', subtitle: 'Resumen consolidado de la iniciativa UAVUSM' };
+    if (activeView === 'overview') return { title: 'Dashboard General', subtitle: 'Árbol de desarrollo y radar de avance de la iniciativa UAVUSM' };
+    if (activeView === 'projects_overview') return { title: 'Proyectos & Fondos', subtitle: 'Presupuestos, balances financieros y catálogo de proyectos' };
+    if (activeView === 'availability') return { title: 'Disponibilidad Semanal', subtitle: 'Carga académica USM y capacidad del equipo semana a semana' };
+    if (activeView === 'rendiciones') return { title: 'Rendiciones & Reembolsos', subtitle: 'Control de boletas, cortes de rendición y transferencias con Skydrone SpA' };
+    if (activeView === 'mateo') return { title: 'Espacio de Mateo', subtitle: 'Dirección técnica y notas privadas de liderazgo' };
     if (activeView === 'admin') return { title: 'Consola de Administración', subtitle: 'Aprobación de materiales y presupuestos' };
     if (activeView === 'project' && activeProject) return { title: activeProject.name, subtitle: `Líder: ${activeProject.leader_name}` };
     return { title: 'UAVUSM Dashboard', subtitle: 'Gestión de proyectos' };
@@ -228,14 +346,66 @@ export default function App() {
           <div 
             className={`menu-item ${activeView === 'overview' ? 'active' : ''}`}
             onClick={() => handleNavigate('overview')}
+            title="Árbol de desarrollo y radar de avance"
           >
-            <LayoutDashboard size={18} />
+            <GitBranch size={18} />
             <span>Resumen General</span>
           </div>
 
-          <span className="sidebar-heading">Proyectos Activos</span>
-          {projects.map(p => {
-            const shortName = p.name.split(':')[0]; // UAV-01, UAV-02 etc.
+          <div 
+            className={`menu-item ${activeView === 'projects_overview' ? 'active' : ''}`}
+            onClick={() => handleNavigate('projects_overview')}
+            title="Tablero general de proyectos, presupuestos y gráficos financieros"
+          >
+            <LayoutGrid size={18} />
+            <span>Proyectos & Fondos</span>
+          </div>
+
+          <div 
+            className={`menu-item ${activeView === 'availability' ? 'active' : ''}`}
+            onClick={() => handleNavigate('availability')}
+            title="Disponibilidad semanal del equipo y calendario académico USM"
+          >
+            <CalendarRange size={18} />
+            <span>Disponibilidad Equipo</span>
+          </div>
+
+          {currentProfile === 'mateo' && isAdmin && (
+            <div 
+              className={`menu-item ${activeView === 'mateo' ? 'active' : ''}`}
+              onClick={() => handleNavigate('mateo')}
+              style={{ color: 'var(--accent-primary)', fontWeight: 600 }}
+            >
+              <Sparkles size={18} />
+              <span>Espacio de Mateo</span>
+            </div>
+          )}
+
+          {(currentProfile === 'mateo' || currentProfile === 'nicolas' || authenticatedUser === 'mateo' || authenticatedUser === 'nicolas' || isAdmin) && (
+            <div 
+              className={`menu-item ${activeView === 'rendiciones' ? 'active' : ''}`}
+              onClick={() => handleNavigate('rendiciones')}
+              style={{ color: '#38bdf8' }}
+              title="Control de boletas, rendiciones y conciliación con Skydrone SpA (Mateo & Nicolás)"
+            >
+              <Receipt size={18} />
+              <span>Rendiciones</span>
+            </div>
+          )}
+
+          {isAdmin && (
+            <div 
+              className={`menu-item ${activeView === 'admin' ? 'active' : ''}`}
+              onClick={() => handleNavigate('admin')}
+            >
+              <Shield size={18} />
+              <span>Consola Admin</span>
+            </div>
+          )}
+
+          <span className="sidebar-heading">Proyectos Activos (Etapa 2)</span>
+          {projects.filter(p => p.status !== 'Completado').map(p => {
+            const shortName = p.name.split(':')[0];
             return (
               <div 
                 key={p.id}
@@ -247,6 +417,27 @@ export default function App() {
               </div>
             );
           })}
+
+          {projects.some(p => p.status === 'Completado') && (
+            <>
+              <span className="sidebar-heading" style={{ marginTop: '1.25rem' }}>Etapa 1 (Expo Seguridad)</span>
+              {projects.filter(p => p.status === 'Completado').map(p => {
+                const shortName = p.name.split(':')[0];
+                return (
+                  <div 
+                    key={p.id}
+                    className={`menu-item ${activeView === 'project' && selectedProjectId === p.id ? 'active' : ''}`}
+                    onClick={() => handleSelectProject(p.id)}
+                    style={{ opacity: 0.8 }}
+                    title="Proyecto culminado y presentado en Expo Seguridad"
+                  >
+                    <CheckCircle2 size={16} style={{ color: 'var(--state-approved)', flexShrink: 0 }} />
+                    <span>{shortName}</span>
+                  </div>
+                );
+              })}
+            </>
+          )}
         </nav>
 
         {/* Sidebar Footer / Connection Status */}
@@ -285,7 +476,19 @@ export default function App() {
             </div>
           </div>
 
-          <div className="actions-section">
+          <div className="actions-section" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            {/* Selector de Perfil (Showcase / Mateo / Equipo) */}
+            <ProfileSelector 
+              currentProfile={currentProfile}
+              onSelectProfile={handleSelectProfile}
+              isAdmin={isAdmin}
+              authenticatedUser={authenticatedUser}
+              onOpenMateoSpace={() => handleNavigate('mateo')}
+              onOpenAuthModal={handleOpenAuthModal}
+              onOpenPinModal={(target) => handleOpenAuthModal(target || getTeamMember('mateo'))}
+              onLogoutAdmin={handleLogout}
+            />
+
             <button 
               onClick={() => setIsAboutModalOpen(true)} 
               className="btn btn-secondary btn-icon" 
@@ -302,26 +505,41 @@ export default function App() {
             >
               <RefreshCw size={16} />
             </button>
-            {isAdmin && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span className="status-pill approved" style={{ fontSize: '0.7rem' }}>
-                  Modo Administrador
-                </span>
-                <button 
-                  onClick={() => handleSetIsAdmin(false)} 
-                  className="btn btn-secondary btn-sm"
-                  style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem' }}
-                >
-                  Cerrar Sesión
-                </button>
-              </div>
-            )}
           </div>
         </header>
 
         {/* Content Container */}
-        <div className="content-container">
-          {renderViewContent()}
+        <div className={`content-container ${activeView === 'overview' ? 'content-container-roadmap' : ''}`}>
+          {currentProfile === 'guest' && activeView !== 'overview' && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '0.75rem',
+              padding: '0.35rem 0.85rem',
+              marginBottom: '0.75rem',
+              backgroundColor: 'rgba(14, 165, 233, 0.05)',
+              border: '1px solid rgba(14, 165, 233, 0.15)',
+              borderRadius: '8px',
+              fontSize: '0.75rem',
+              color: 'var(--text-secondary, #94a3b8)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <span style={{ fontSize: '0.85rem' }}>🌐</span>
+                <span>Modo Showcase (Solo Lectura)</span>
+              </div>
+              <button
+                onClick={() => handleOpenAuthModal(getTeamMember('mateo'))}
+                className="btn btn-secondary btn-sm"
+                style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem', borderRadius: '5px' }}
+              >
+                Acceso Miembros / Mateo →
+              </button>
+            </div>
+          )}
+          <ErrorBoundary key={activeView + (selectedProjectId || '')}>
+            {renderViewContent()}
+          </ErrorBoundary>
         </div>
       </main>
 
@@ -329,6 +547,13 @@ export default function App() {
         isOpen={isAboutModalOpen} 
         onClose={() => setIsAboutModalOpen(false)} 
         projects={projects} 
+      />
+
+      <PinModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onSuccess={handleAuthSuccess}
+        targetMember={authTargetMember}
       />
     </div>
   );

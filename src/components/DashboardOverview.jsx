@@ -1,467 +1,349 @@
 import React, { useState } from 'react';
 import { 
-  PieChart, Pie, Cell, Tooltip, ResponsiveContainer
-} from 'recharts';
-import { Wallet, CheckSquare, Clock, AlertCircle, ArrowRight, LayoutGrid, Table, FileText, Calendar, User } from 'lucide-react';
+  GitBranch, CheckCircle2, Clock, AlertTriangle, ArrowRight, 
+  Calendar, User, Sparkles, Trophy, Zap, Layers, Wallet, 
+  Check, ChevronRight, BarChart3, AlertCircle, Info, ExternalLink,
+  ShieldCheck, ArrowUpRight, GraduationCap, BatteryCharging, Wrench, Paintbrush,
+  Radio, Code, Cpu, LayoutGrid, Filter
+} from 'lucide-react';
+import { getProjectPhase } from '../services/db';
+import DependencyGraphCanvas from './roadmap/DependencyGraphCanvas';
+import PhasesBoardView from './roadmap/PhasesBoardView';
+import NodeInspectorDrawer from './roadmap/NodeInspectorDrawer';
+import { ROADMAP_PROJECTS } from '../data/roadmapGraphData';
 
-const COLORS = ['#0ea5e9', '#f97316', '#10b981', '#a855f7', '#6366f1'];
-
-export default function DashboardOverview({ projects, materials, tasks, onSelectProject }) {
-  const [viewType, setViewType] = useState('table'); // 'table' | 'grid'
-
-  // --- CÁLCULOS DE MÉTRICAS ---
-  const totalBudget = projects.reduce((sum, p) => sum + Number(p.budget), 0);
+export default function DashboardOverview({ 
+  projects = [], 
+  materials = [], 
+  tasks = [], 
+  onSelectProject, 
+  onNavigate 
+}) {
+  // Modo de vista: 'graph' (Árbol de Dependencias con SVG) | 'board' (Tablero por Fases) | 'finance' (Métricas)
+  const [activeViewMode, setActiveViewMode] = useState('graph');
   
-  // Gastos aprobados o comprados (Total Aprobado)
-  const approvedExpenses = materials
+  // Filtro de rama de proyecto: 'all' | 'copter' | 'dock' | 'remote' | 'vtol' | 'avion' | 'fondo' | 'pista'
+  const [selectedFilterProject, setSelectedFilterProject] = useState('all');
+
+  // Selector de etapa para la vista financiera: 'etapa_2' | 'etapa_1' | 'all'
+  const [selectedStage, setSelectedStage] = useState('etapa_2');
+  
+  // Nodo seleccionado para el panel inspector lateral
+  const [selectedNodeId, setSelectedNodeId] = useState(null);
+
+  // Navegación desde el inspector a un proyecto en el dashboard
+  const handleNavigateToProject = (roadmapProjId) => {
+    let matched = null;
+    if (roadmapProjId === 'copter') matched = projects.find(p => p.name?.toLowerCase().includes('copter'));
+    else if (roadmapProjId === 'dock') matched = projects.find(p => p.name?.toLowerCase().includes('doc'));
+    else if (roadmapProjId === 'remote') matched = projects.find(p => p.name?.toLowerCase().includes('remote'));
+    else if (roadmapProjId === 'vtol') matched = projects.find(p => p.name?.toLowerCase().includes('betol'));
+    else if (roadmapProjId === 'avion') matched = projects.find(p => p.name?.toLowerCase().includes('avión') || p.name?.toLowerCase().includes('avion'));
+    else if (roadmapProjId === 'fondo') matched = projects.find(p => p.name?.toLowerCase().includes('fondo') || p.name?.toLowerCase().includes('concurso'));
+
+    if (matched && onSelectProject) {
+      onSelectProject(matched.id);
+    }
+  };
+
+  // Fecha de referencia actual: 10 de Septiembre de 2026
+  const TODAY_STR = '2026-09-10';
+  const todayDate = new Date(TODAY_STR);
+
+  // Filtrado de proyectos activos (Etapa 2)
+  const activeProjects = projects.filter(p => getProjectPhase(p) === 'etapa_2');
+
+  // --- CÁLCULO DE SALUD Y RETRASOS EN TIEMPO REAL ---
+  const calculateProjectHealth = (project) => {
+    if (!project) return { status: 'on_track', label: 'Al día', colorClass: 'green', days: 0 };
+    
+    const projectTasks = tasks.filter(t => t.project_id === project.id);
+    const pendingTasks = projectTasks.filter(t => t.status !== 'done');
+    
+    let hasOverdue = false;
+    let minDiffDays = Infinity;
+    let nextTask = null;
+
+    pendingTasks.forEach(t => {
+      if (!t.due_date) return;
+      const dueDate = new Date(t.due_date);
+      const diffTime = dueDate.getTime() - todayDate.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays < 0) {
+        hasOverdue = true;
+      }
+      if (diffDays >= 0 && diffDays < minDiffDays) {
+        minDiffDays = diffDays;
+        nextTask = t;
+      }
+    });
+
+    if (hasOverdue) {
+      return {
+        status: 'overdue',
+        label: 'Atrasado',
+        colorClass: 'red',
+        days: minDiffDays < 0 ? minDiffDays : 0,
+        nextTask
+      };
+    }
+
+    if (minDiffDays <= 8 && minDiffDays !== Infinity) {
+      return {
+        status: 'imminent',
+        label: `Hito en ${minDiffDays}d`,
+        colorClass: 'yellow',
+        days: minDiffDays,
+        nextTask
+      };
+    }
+
+    return {
+      status: 'on_track',
+      label: minDiffDays !== Infinity ? `Al día (${minDiffDays}d)` : 'Al día',
+      colorClass: 'green',
+      days: minDiffDays !== Infinity ? minDiffDays : 30,
+      nextTask
+    };
+  };
+
+  // Salud de proyectos específicos
+  const skycopterProj = activeProjects.find(p => p.name?.toLowerCase().includes('copter'));
+  const skydocProj = activeProjects.find(p => p.name?.toLowerCase().includes('doc'));
+  const skyremoteProj = activeProjects.find(p => p.name?.toLowerCase().includes('remote'));
+  const skybetolProj = activeProjects.find(p => p.name?.toLowerCase().includes('betol'));
+  const avionProj = activeProjects.find(p => p.name?.toLowerCase().includes('avión') || p.name?.toLowerCase().includes('avion'));
+  const fondoUsmProj = activeProjects.find(p => p.name?.toLowerCase().includes('fondo') || p.name?.toLowerCase().includes('concurso'));
+
+  const copterHealth = calculateProjectHealth(skycopterProj);
+  const docHealth = calculateProjectHealth(skydocProj);
+  const remoteHealth = calculateProjectHealth(skyremoteProj);
+  const betolHealth = calculateProjectHealth(skybetolProj);
+  const avionHealth = calculateProjectHealth(avionProj);
+  const fondoHealth = calculateProjectHealth(fondoUsmProj);
+
+  // Salud Global del Ecosistema
+  const allHealths = [copterHealth, docHealth, remoteHealth, betolHealth, avionHealth, fondoHealth];
+  const totalOverdue = allHealths.filter(h => h.status === 'overdue').length;
+  const totalImminent = allHealths.filter(h => h.status === 'imminent').length;
+
+  const globalHealth = totalOverdue > 0 
+    ? { label: `${totalOverdue} Proyecto Atrasado`, colorClass: 'red', text: 'Hay tareas vencidas que requieren intervención urgente.' }
+    : totalImminent > 0
+      ? { label: 'Hito Inminente', colorClass: 'yellow', text: 'Ensayos de vuelo Skycopter v2 programados para el 18 de septiembre.' }
+      : { label: 'Ecosistema al Día', colorClass: 'green', text: 'Todos los proyectos de la Etapa 2 avanzan según cronograma.' };
+
+  // --- CÁLCULOS FINANCIEROS (Pestaña Finanzas) ---
+  const filteredProjectsForFinance = projects.filter(p => {
+    if (selectedStage === 'all') return true;
+    return getProjectPhase(p) === selectedStage;
+  });
+
+  const filteredProjectIds = new Set(filteredProjectsForFinance.map(p => p.id));
+  const filteredMaterials = materials.filter(m => filteredProjectIds.has(m.project_id));
+
+  const totalBudget = filteredProjectsForFinance.reduce((sum, p) => sum + Number(p.budget), 0);
+  const approvedExpenses = filteredMaterials
     .filter(m => m.status === 'approved' || m.status === 'purchased')
     .reduce((sum, m) => sum + (Number(m.unit_price) * Number(m.quantity)), 0);
-
-  // Gastos reales (Total Gastado: en estado de pedido "Pedido" o "Disponible")
-  const spentExpenses = materials
+  const spentExpenses = filteredMaterials
     .filter(m => (m.status === 'approved' || m.status === 'purchased') && (m.purchase_status === 'pedido' || m.purchase_status === 'disponible'))
     .reduce((sum, m) => sum + (Number(m.unit_price) * Number(m.quantity)), 0);
-
-  // Presupuesto disponible (Disponible = Presupuesto Total - Gastado)
   const availableBudget = totalBudget - spentExpenses;
 
-  // Gastos pendientes de aprobación
-  const pendingExpenses = materials
-    .filter(m => m.status === 'pending')
-    .reduce((sum, m) => sum + (Number(m.unit_price) * Number(m.quantity)), 0);
-
-  // Estadísticas de tareas
-  const totalTasksCount = tasks.length;
-  const completedTasksCount = tasks.filter(t => t.status === 'done').length;
-  const taskCompletionRate = totalTasksCount > 0 
-    ? Math.round((completedTasksCount / totalTasksCount) * 100) 
-    : 0;
-
-  // --- DATOS PARA GRÁFICOS ---
-  // 1. Gráfico de Torta: Presupuesto Disponible por Proyecto
-  const availableBudgetPieData = projects.map(p => {
-    const projectMaterials = materials.filter(m => m.project_id === p.id);
-    const spent = projectMaterials
-      .filter(m => (m.status === 'approved' || m.status === 'purchased') && (m.purchase_status === 'pedido' || m.purchase_status === 'disponible'))
-      .reduce((sum, m) => sum + (Number(m.unit_price) * Number(m.quantity)), 0);
-    const available = Math.max(0, Number(p.budget) - spent);
-
-    return {
-      name: p.name,
-      value: available
-    };
-  }).filter(d => d.value > 0);
-
-  // 2. Gráfico de Torta: Distribución del Gasto Real por Proyecto
-  const pieChartData = projects.map((p, index) => {
-    const projectMaterials = materials.filter(m => m.project_id === p.id);
-    const spent = projectMaterials
-      .filter(m => (m.status === 'approved' || m.status === 'purchased') && (m.purchase_status === 'pedido' || m.purchase_status === 'disponible'))
-      .reduce((sum, m) => sum + (Number(m.unit_price) * Number(m.quantity)), 0);
-
-    return {
-      name: p.name,
-      value: spent
-    };
-  }).filter(d => d.value > 0); // Solo mostrar proyectos con gastos reales
-
-  // Helper date formatter: formats "YYYY-MM-DD" to "July 31, 2026"
-  const formatDate = (dateStr) => {
-    if (!dateStr) return 'Sin fecha';
-    // Split date string to avoid timezone shifts
-    const parts = dateStr.split('-');
-    if (parts.length === 3) {
-      const year = parseInt(parts[0], 10);
-      const month = parseInt(parts[1], 10) - 1;
-      const day = parseInt(parts[2], 10);
-      const date = new Date(year, month, day);
-      return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-    }
-    return new Date(dateStr).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-  };
-
-  // Helper status class for Notion view
-  const getNotionStatusClass = (status) => {
-    if (!status) return 'por-iniciar';
-    const s = status.toLowerCase();
-    if (s === 'por iniciar') return 'por-iniciar';
-    if (s === 'en progreso' || s === 'en_progreso') return 'en-progreso';
-    if (s === 'completado' || s === 'done') return 'completado';
-    return 'por-iniciar';
-  };
-
   return (
-    <div className="dashboard-overview">
-      {/* Grid de Métricas Clave */}
-      <div className="metrics-grid">
-        {/* 1. Presupuesto Total */}
-        <div className="card metric-card">
-          <div className="metric-icon-box">
-            <Wallet size={24} />
-          </div>
-          <div className="metric-info">
-            <span className="metric-value">CLP {totalBudget.toLocaleString('en-US')}</span>
-            <span className="metric-label">Presupuesto Total</span>
-          </div>
+    <div className="dashboard-executive-container dashboard-fullscreen-roadmap">
+      {/* ====================================================================
+          1. GRAFO DE DEPENDENCIAS INTERACTIVO (SVG BÉZIER + PAN & ZOOM)
+         ==================================================================== */}
+      {activeViewMode === 'graph' && (
+        <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', flex: 1 }}>
+          <DependencyGraphCanvas 
+            selectedProjectId={selectedFilterProject}
+            onSelectNode={setSelectedNodeId}
+            selectedNodeId={selectedNodeId}
+          />
         </div>
+      )}
 
-        {/* 2. Total Gastado */}
-        <div className="card metric-card">
-          <div className="metric-icon-box orange">
-            <Wallet size={24} />
-          </div>
-          <div className="metric-info">
-            <span className="metric-value">CLP {spentExpenses.toLocaleString('en-US')}</span>
-            <span className="metric-label">Total Gastado</span>
-          </div>
+      {/* ====================================================================
+          4. MODO 2: TABLERO COMPACTO POR FASES (ZERO SCROLL HORIZONTAL)
+         ==================================================================== */}
+      {activeViewMode === 'board' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <PhasesBoardView 
+            selectedProjectId={selectedFilterProject}
+            onSelectNode={setSelectedNodeId}
+          />
         </div>
+      )}
 
-        {/* 3. Presupuesto Disponible */}
-        <div className="card metric-card">
-          <div className="metric-icon-box green">
-            <Wallet size={24} />
-          </div>
-          <div className="metric-info">
-            <span className="metric-value">CLP {availableBudget.toLocaleString('en-US')}</span>
-            <span className="metric-label">Presupuesto Disponible</span>
-          </div>
-        </div>
-
-        {/* 4. Total Aprobado */}
-        <div className="card metric-card">
-          <div className="metric-icon-box">
-            <Wallet size={24} style={{ color: '#a855f7' }} />
-          </div>
-          <div className="metric-info">
-            <span className="metric-value">CLP {approvedExpenses.toLocaleString('en-US')}</span>
-            <span className="metric-label">Total Aprobado</span>
-          </div>
-        </div>
-
-        {/* 5. Pendiente Aprobación */}
-        <div className="card metric-card">
-          <div className="metric-icon-box orange" style={{ backgroundColor: 'rgba(234, 179, 8, 0.1)', color: 'var(--state-pending)', borderColor: 'rgba(234, 179, 8, 0.15)' }}>
-            <AlertCircle size={24} />
-          </div>
-          <div className="metric-info">
-            <span className="metric-value">CLP {pendingExpenses.toLocaleString('en-US')}</span>
-            <span className="metric-label">Pendiente Aprobación</span>
-          </div>
-        </div>
-
-        {/* 6. Tareas Completadas */}
-        <div className="card metric-card">
-          <div className="metric-icon-box">
-            <CheckSquare size={24} />
-          </div>
-          <div className="metric-info">
-            <span className="metric-value">{taskCompletionRate}%</span>
-            <span className="metric-label">Tareas Completadas ({completedTasksCount}/{totalTasksCount})</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Gráficos Estadísticos */}
-      <div className="dashboard-grid-charts">
-        {/* Presupuesto disponible por proyecto */}
-        <div className="card">
-          <div className="chart-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
-            <div>
-              <h3 className="chart-title">Presupuesto disponible por proyecto</h3>
-              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                Total disponible: <strong style={{ color: 'var(--state-approved)' }}>CLP {availableBudget.toLocaleString('en-US')}</strong>
+      {/* ====================================================================
+          3. VISTA FINANCIERA Y MÉTRICAS (MODO SECUNDARIO)
+         ==================================================================== */}
+      {activeViewMode === 'finance' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          
+          {/* Selector de Etapa de Finanzas */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '1rem',
+            padding: '0.85rem 1.25rem',
+            backgroundColor: 'var(--bg-secondary)',
+            borderRadius: '12px',
+            border: '1px solid var(--border-color)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Wallet size={18} style={{ color: 'var(--accent-primary)' }} />
+              <span style={{ fontSize: '0.9rem', fontWeight: 700 }}>
+                {selectedStage === 'etapa_2' ? 'Presupuesto Etapa 2 (Nuevas Versiones)' : 'Cierre Etapa 1 (Prototipos Expo Seguridad)'}
               </span>
             </div>
-          </div>
-          <div style={{ width: '100%', height: 260, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            {availableBudgetPieData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={availableBudgetPieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={55}
-                    outerRadius={75}
-                    paddingAngle={4}
-                    dataKey="value"
-                  >
-                    {availableBudgetPieData.map((entry, index) => (
-                      <Cell key={`cell-avail-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#121826', borderColor: '#2e3d5c', color: '#f8fafc' }}
-                    formatter={(value) => [`CLP ${Number(value).toLocaleString('en-US')}`, 'Disponible']}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="text-center" style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-                <Wallet size={36} style={{ marginBottom: '0.75rem', opacity: 0.5 }} />
-                <p>No hay presupuesto disponible.</p>
-              </div>
-            )}
-            
-            {/* Leyenda Personalizada para Torta */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1rem', justifyContent: 'center', marginTop: '0.5rem', fontSize: '0.75rem' }}>
-              {availableBudgetPieData.map((entry, index) => (
-                <div key={entry.name} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: COLORS[index % COLORS.length] }}></span>
-                  <span style={{ color: 'var(--text-secondary)' }}>{entry.name}: <strong>CLP {entry.value.toLocaleString('en-US')}</strong></span>
-                </div>
-              ))}
+
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                onClick={() => setSelectedStage('etapa_2')}
+                className={`btn btn-sm ${selectedStage === 'etapa_2' ? 'btn-primary' : 'btn-secondary'}`}
+              >
+                Etapa 2 (Activa)
+              </button>
+              <button
+                onClick={() => setSelectedStage('etapa_1')}
+                className={`btn btn-sm ${selectedStage === 'etapa_1' ? 'btn-primary' : 'btn-secondary'}`}
+                style={selectedStage === 'etapa_1' ? { backgroundColor: 'var(--state-approved)' } : {}}
+              >
+                Etapa 1 (Expo Seguridad)
+              </button>
+              <button
+                onClick={() => setSelectedStage('all')}
+                className={`btn btn-sm ${selectedStage === 'all' ? 'btn-primary' : 'btn-secondary'}`}
+              >
+                Consolidado
+              </button>
             </div>
           </div>
-        </div>
 
-        {/* Distribución del Gasto */}
-        <div className="card">
-          <div className="chart-header">
-            <h3 className="chart-title">Distribución de Gastos Reales</h3>
-          </div>
-          <div style={{ width: '100%', height: 260, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            {pieChartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={pieChartData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={55}
-                    outerRadius={75}
-                    paddingAngle={4}
-                    dataKey="value"
-                  >
-                    {pieChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#121826', borderColor: '#2e3d5c', color: '#f8fafc' }}
-                    formatter={(value) => [`CLP ${Number(value).toLocaleString('en-US')}`, '']}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="text-center" style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-                <Wallet size={36} style={{ marginBottom: '0.75rem', opacity: 0.5 }} />
-                <p>No hay gastos reales aún.</p>
+          {/* Grid de Métricas de Finanzas */}
+          <div className="metrics-grid">
+            <div className="card metric-card">
+              <div className="metric-icon-box">
+                <Wallet size={22} />
               </div>
-            )}
-            
-            {/* Leyenda Personalizada para Torta */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1rem', justifyContent: 'center', marginTop: '0.5rem', fontSize: '0.75rem' }}>
-              {pieChartData.map((entry, index) => (
-                <div key={entry.name} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: COLORS[index % COLORS.length] }}></span>
-                  <span style={{ color: 'var(--text-secondary)' }}>{entry.name}: <strong>CLP {entry.value.toLocaleString('en-US')}</strong></span>
-                </div>
-              ))}
+              <div className="metric-info">
+                <span className="metric-value">CLP {totalBudget.toLocaleString('en-US')}</span>
+                <span className="metric-label">Presupuesto</span>
+              </div>
+            </div>
+
+            <div className="card metric-card">
+              <div className="metric-icon-box orange">
+                <Wallet size={22} />
+              </div>
+              <div className="metric-info">
+                <span className="metric-value">CLP {spentExpenses.toLocaleString('en-US')}</span>
+                <span className="metric-label">Total Gastado</span>
+              </div>
+            </div>
+
+            <div className="card metric-card">
+              <div className="metric-icon-box green">
+                <Wallet size={22} />
+              </div>
+              <div className="metric-info">
+                <span className="metric-value">CLP {availableBudget.toLocaleString('en-US')}</span>
+                <span className="metric-label">Disponible</span>
+              </div>
+            </div>
+
+            <div className="card metric-card">
+              <div className="metric-icon-box">
+                <Wallet size={22} style={{ color: '#a855f7' }} />
+              </div>
+              <div className="metric-info">
+                <span className="metric-value">CLP {approvedExpenses.toLocaleString('en-US')}</span>
+                <span className="metric-label">Aprobado</span>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Listado de Proyectos */}
-      <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
-          <h2 style={{ fontSize: '1.25rem', fontFamily: 'var(--font-display)', margin: 0 }}>Nuestros Proyectos Estudiantiles</h2>
-          
-          {/* Alternador de Vista (Estilo Notion vs Tarjetas) */}
-          <div className="view-toggle-container">
-            <button 
-              className={`view-toggle-btn ${viewType === 'table' ? 'active' : ''}`}
-              onClick={() => setViewType('table')}
-              title="Vista de Tabla estilo Notion"
-            >
-              <Table size={14} />
-              <span>Vista Notion</span>
-            </button>
-            <button 
-              className={`view-toggle-btn ${viewType === 'grid' ? 'active' : ''}`}
-              onClick={() => setViewType('grid')}
-              title="Vista de Tarjetas Premium"
-            >
-              <LayoutGrid size={14} />
-              <span>Vista Tarjetas</span>
-            </button>
-          </div>
-        </div>
+          {/* Tabla de Proyectos y Presupuestos */}
+          <div className="card" style={{ padding: '1.25rem' }}>
+            <h4 style={{ margin: '0 0 1rem 0', fontSize: '1rem', fontWeight: 700 }}>
+              Detalle de Proyectos en esta Selección ({filteredProjectsForFinance.length})
+            </h4>
 
-        {viewType === 'table' ? (
-          /* ====================================================================
-             VISTA DE TABLA (ESTILO NOTION)
-             ==================================================================== */
-          <div className="table-container">
-            <table className="notion-view-table">
-              <thead>
-                <tr>
-                  <th style={{ width: '22%' }}>Proyecto</th>
-                  <th style={{ width: '38%' }}>Descripción</th>
-                  <th style={{ width: '12%' }}>Estado</th>
-                  <th style={{ width: '12%' }}>Plazo</th>
-                  <th style={{ width: '11%' }}>Presupuesto (CLP)</th>
-                  <th style={{ width: '15%' }}>Responsable</th>
-                </tr>
-              </thead>
-              <tbody>
-                {projects.map(project => {
-                  const leaderInitials = project.leader_name
-                    ? project.leader_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
-                    : 'U';
-                  
-                  return (
-                    <tr key={project.id}>
+            <div className="table-container">
+              <table className="notion-view-table">
+                <thead>
+                  <tr>
+                    <th>Proyecto</th>
+                    <th>Líder</th>
+                    <th>Estado</th>
+                    <th>Presupuesto</th>
+                    <th>Fecha / Plazo</th>
+                    <th>Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredProjectsForFinance.map(p => (
+                    <tr key={p.id}>
+                      <td style={{ fontWeight: 600 }}>{p.name}</td>
+                      <td>{p.leader_name}</td>
                       <td>
-                        <div 
-                          className="notion-project-name"
-                          onClick={() => onSelectProject(project.id)}
-                        >
-                          <FileText size={16} style={{ color: 'var(--text-secondary)', flexShrink: 0 }} />
-                          <span>{project.name}</span>
-                        </div>
-                      </td>
-                      <td style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
-                        {project.description}
-                      </td>
-                      <td>
-                        <span className={`notion-status-pill ${getNotionStatusClass(project.status)}`}>
-                          <span className="dot"></span>
-                          {project.status || 'Por iniciar'}
-                        </span>
-                      </td>
-                      <td style={{ color: 'var(--text-secondary)' }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                          <Calendar size={13} style={{ color: 'var(--text-muted)' }} />
-                          {formatDate(project.due_date)}
+                        <span className={`notion-status-pill ${p.status === 'Completado' ? 'completado' : 'en-progreso'}`}>
+                          <span className="dot"></span> {p.status}
                         </span>
                       </td>
                       <td style={{ fontWeight: 600 }}>
-                        CLP {Number(project.budget).toLocaleString('en-US')}
+                        {Number(p.budget) === 0 ? 'CLP 0 (Por reasignar)' : `CLP ${Number(p.budget).toLocaleString('en-US')}`}
                       </td>
+                      <td>{p.due_date}</td>
                       <td>
-                        <div className="notion-avatar-container">
-                          <span className="notion-avatar" title={project.leader_name}>
-                            {leaderInitials[0]}
-                          </span>
-                          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                            {project.leader_name}
-                          </span>
-                        </div>
+                        <button 
+                          onClick={() => onSelectProject(p.id)}
+                          className="btn btn-secondary btn-sm"
+                          style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}
+                        >
+                          Gestionar
+                        </button>
                       </td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        ) : (
-          /* ====================================================================
-             VISTA DE TARJETAS (ORIGINAL PREMIUM)
-             ==================================================================== */
-          <div className="projects-grid">
-            {projects.map(project => {
-              const projectMaterials = materials.filter(m => m.project_id === project.id);
-              const approved = projectMaterials
-                .filter(m => m.status === 'approved' || m.status === 'purchased')
-                .reduce((sum, m) => sum + (Number(m.unit_price) * Number(m.quantity)), 0);
-              const spent = projectMaterials
-                .filter(m => (m.status === 'approved' || m.status === 'purchased') && (m.purchase_status === 'pedido' || m.purchase_status === 'disponible'))
-                .reduce((sum, m) => sum + (Number(m.unit_price) * Number(m.quantity)), 0);
-              
-              const projectTasks = tasks.filter(t => t.project_id === project.id);
-              const doneTasks = projectTasks.filter(t => t.status === 'done').length;
-              const taskProgress = projectTasks.length > 0 
-                ? Math.round((doneTasks / projectTasks.length) * 100) 
-                : 0;
 
-              const budgetPercent = Math.min(Math.round((spent / Number(project.budget)) * 100), 100);
-
-              const leaderInitials = project.leader_name
-                ? project.leader_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
-                : 'U';
-
-              return (
-                <div className="card project-card" key={project.id}>
-                  {project.image_url ? (
-                    <div 
-                      className="project-card-image" 
-                      style={{ backgroundImage: `url(${project.image_url})` }}
-                    >
-                      <span className="project-badge">Iniciativa UAV</span>
-                    </div>
-                  ) : (
-                    <div 
-                      className="project-card-image" 
-                      style={{ background: 'linear-gradient(135deg, #1b2336 0%, #0b0f19 100%)' }}
-                    >
-                      <span className="project-badge">Iniciativa UAV</span>
-                    </div>
-                  )}
-                  
-                  <div className="project-card-body">
-                    <h3 className="project-card-title">{project.name}</h3>
-                    <p className="project-card-description">{project.description}</p>
-                    
-                    {/* Progreso del Presupuesto */}
-                    <div style={{ marginBottom: '1rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
-                        <span style={{ color: 'var(--text-secondary)' }}>Presupuesto Gastado</span>
-                        <span style={{ fontWeight: 600 }}>{budgetPercent}% (CLP {spent.toLocaleString('en-US')} / CLP {Number(project.budget).toLocaleString('en-US')})</span>
-                      </div>
-                      <div className="progress-bar-container">
-                        <div 
-                          className="progress-bar-fill" 
-                          style={{ 
-                            width: `${budgetPercent}%`,
-                            backgroundColor: budgetPercent > 90 ? 'var(--state-danger)' : budgetPercent > 70 ? 'var(--state-pending)' : 'var(--state-approved)'
-                          }}
-                        ></div>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginTop: '0.25rem', color: 'var(--text-muted)' }}>
-                        <span>Aprobado: CLP {approved.toLocaleString('en-US')}</span>
-                        <span>Disponible: CLP {(Number(project.budget) - spent).toLocaleString('en-US')}</span>
-                      </div>
-                    </div>
-
-                    {/* Progreso de Tareas */}
-                    <div style={{ marginBottom: '1.25rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
-                        <span style={{ color: 'var(--text-secondary)' }}>Progreso de Tareas</span>
-                        <span style={{ fontWeight: 600 }}>{taskProgress}% ({doneTasks}/{projectTasks.length})</span>
-                      </div>
-                      <div className="progress-bar-container">
-                        <div className="progress-bar-fill" style={{ width: `${taskProgress}%` }}></div>
-                      </div>
-                    </div>
-
-                    <div className="project-card-meta">
-                      <div className="meta-item">
-                        <span className="meta-label">Líder</span>
-                        <span className="meta-value" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.15rem' }}>
-                          <span className="leader-avatar" style={{ width: '20px', height: '20px', fontSize: '0.6rem' }}>
-                            {leaderInitials}
-                          </span>
-                          {project.leader_name}
-                        </span>
-                      </div>
-                      <div className="meta-item" style={{ alignItems: 'flex-end', justifyContent: 'center' }}>
-                        <button 
-                          onClick={() => onSelectProject(project.id)}
-                          className="btn btn-primary btn-sm"
-                        >
-                          Gestionar <ArrowRight size={14} />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+          {/* Botón de retorno al Árbol */}
+          {/* Botón de retorno al Grafo */}
+          <div style={{ textAlign: 'center' }}>
+            <button
+              onClick={() => setActiveViewMode('graph')}
+              className="btn btn-primary"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+            >
+              <GitBranch size={16} />
+              <span>Volver al Grafo de Dependencias</span>
+            </button>
           </div>
-        )}
-      </div>
+
+        </div>
+      )}
+
+      {/* Panel Inspector Lateral Interactivo */}
+      {selectedNodeId && (
+        <NodeInspectorDrawer 
+          nodeId={selectedNodeId}
+          onClose={() => setSelectedNodeId(null)}
+          onSelectNode={setSelectedNodeId}
+          onNavigateToProject={handleNavigateToProject}
+        />
+      )}
+
     </div>
   );
 }

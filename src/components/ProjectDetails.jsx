@@ -5,6 +5,7 @@ import {
   Lock, Unlock, ShieldAlert, AlertTriangle, Link, Beaker, Save, Image
 } from 'lucide-react';
 import { dbService } from '../services/db';
+import { TEAM_MEMBERS, parseAssignedMembers } from '../services/team';
 
 export default function ProjectDetails({ 
   project, 
@@ -324,7 +325,9 @@ export default function ProjectDetails({
     .filter(m => m.status === 'pending')
     .reduce((sum, m) => sum + (Number(m.unit_price) * Number(m.quantity)), 0);
 
-  const budgetPercent = Math.min(Math.round((totalSpent / Number(project.budget)) * 100), 100);
+  const budgetPercent = Number(project.budget) > 0 
+    ? Math.min(Math.round((totalSpent / Number(project.budget)) * 100), 100)
+    : 0;
 
   // Tareas por estado
   const todoTasks = projectTasks.filter(t => t.status === 'todo');
@@ -493,7 +496,8 @@ export default function ProjectDetails({
 
   const handlePinSubmit = async (e) => {
     e.preventDefault();
-    if (dbService.verifyAdminPin(pinInput)) {
+    const isValid = await dbService.verifyAdminCredentials(pinInput);
+    if (isValid) {
       setIsAdmin(true);
       setIsPinModalOpen(false);
       
@@ -1096,7 +1100,7 @@ export default function ProjectDetails({
             <FileText size={16} /> Notas ({projectNotes.length})
           </span>
         </button>
-        {(project.id === 'd2222222-2222-2222-2222-222222222222' || project.name?.toLowerCase().includes('recubrimiento')) && (
+        {(project.id === 'd2222222-2222-2222-2222-222222222222' || project.id === 'e2222222-2222-2222-2222-222222222222' || project.name?.toLowerCase().includes('recubrimiento') || project.name?.toLowerCase().includes('skybetol')) && (
           <button 
             className={`tab-btn ${activeTab === 'trials' ? 'active' : ''}`}
             onClick={() => setActiveTab('trials')}
@@ -1779,6 +1783,7 @@ export default function ProjectDetails({
                     required
                   >
                     <option value="" disabled>Selecciona tu nombre</option>
+                    <option value="Vicente.D">Vicente.D</option>
                     <option value="Renato.R">Renato.R</option>
                     <option value="Tomas.H">Tomas.H</option>
                     <option value="Paolo.L">Paolo.L</option>
@@ -1836,14 +1841,46 @@ export default function ProjectDetails({
 
                 <div className="form-row">
                   <div className="form-group">
-                    <label>Asignado A</label>
+                    <label>Asignado A (uno o varios miembros)</label>
                     <input 
                       type="text" 
+                      list="team-members-list"
                       className="form-input" 
-                      placeholder="Ej: Carlos Díaz"
+                      placeholder="Ej: Pablo y Mateo, Paula y Roro..."
                       value={taskForm.assigned_to}
                       onChange={e => setTaskForm({ ...taskForm, assigned_to: e.target.value })}
                     />
+                    <datalist id="team-members-list">
+                      {TEAM_MEMBERS.map(m => (
+                        <option key={m.id} value={m.name} label={`${m.fullName} - ${m.role}`} />
+                      ))}
+                    </datalist>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginTop: '0.4rem' }}>
+                      {TEAM_MEMBERS.map(m => (
+                        <button
+                          key={m.id}
+                          type="button"
+                          onClick={() => {
+                            const current = taskForm.assigned_to ? taskForm.assigned_to.split(' y ').map(s => s.trim()) : [];
+                            if (!current.includes(m.name)) {
+                              current.push(m.name);
+                              setTaskForm({ ...taskForm, assigned_to: current.join(' y ') });
+                            }
+                          }}
+                          style={{
+                            fontSize: '0.7rem',
+                            padding: '0.15rem 0.45rem',
+                            borderRadius: '4px',
+                            border: '1px solid var(--border-color)',
+                            backgroundColor: 'var(--bg-tertiary)',
+                            color: m.color,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          + {m.name}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                   <div className="form-group">
                     <label>Fecha de Entrega</label>
@@ -2339,9 +2376,35 @@ export default function ProjectDetails({
         </div>
 
         <div className="kanban-card-footer">
-          <span className="kanban-card-assignee">
-            <User size={12} /> {task.assigned_to || 'Sin asignar'}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', flexWrap: 'wrap' }}>
+            {task.assigned_to ? (
+              parseAssignedMembers(task.assigned_to).map((m, idx) => (
+                <span 
+                  key={idx} 
+                  className="kanban-card-assignee"
+                  title={`${m.name} - ${m.role}`}
+                  style={{
+                    backgroundColor: m.bgBadge || 'rgba(255,255,255,0.06)',
+                    color: m.color || '#cbd5e1',
+                    border: `1px solid ${m.borderBadge || 'rgba(255,255,255,0.1)'}`,
+                    borderRadius: '4px',
+                    padding: '0.1rem 0.4rem',
+                    fontSize: '0.75rem',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.25rem'
+                  }}
+                >
+                  <span>{m.avatar}</span>
+                  <span>{m.name}</span>
+                </span>
+              ))
+            ) : (
+              <span className="kanban-card-assignee">
+                <User size={12} /> Sin asignar
+              </span>
+            )}
+          </div>
           {formattedDate && (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: isOverdue(task.due_date) && task.status !== 'done' ? 'var(--state-danger)' : 'var(--text-muted)' }}>
               <Calendar size={12} /> {formattedDate}

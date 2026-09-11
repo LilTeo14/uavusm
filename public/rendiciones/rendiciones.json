@@ -1,0 +1,242 @@
+{
+  "proyecto": "Skydrone SpA - Compras y Rendiciones",
+  "descripcion": "Registro de gastos, boletas, rendiciones y transferencias de Skydrone SpA.",
+  "gastos": [
+    {
+      "id": "g-1",
+      "fecha": "2026-08-24",
+      "hora": "12:17:48",
+      "proveedor": "Sodimac",
+      "items": [
+        {
+          "codigo": "1611895",
+          "descripcion": "AEROGRAFO 8PZAS INDURA",
+          "cantidad": 1,
+          "total": 31924
+        },
+        {
+          "codigo": "896675",
+          "descripcion": "AGUA DESMINERALIZADA 5L",
+          "cantidad": 1,
+          "total": 2353
+        },
+        {
+          "codigo": "160717",
+          "descripcion": "PLACA MDF DESNUDO 3MM 152X244",
+          "cantidad": 2,
+          "total": 17059
+        }
+      ],
+      "monto": 61090,
+      "archivo": "/rendiciones/boletas/boleta_2026-08-24_sodimac_61090.png",
+      "estado": "PAGADO",
+      "rendido": true,
+      "transferenciaId": "t-1",
+      "notas": "Parte del pago de $220.000 del 28/08/2026."
+    },
+    {
+      "id": "g-2",
+      "fecha": "2026-08-21",
+      "hora": "13:51:08",
+      "proveedor": "Pinturas Motta SpA",
+      "rut": "76.638.967-8",
+      "direccion": "Calle Monjitas 359, Santiago",
+      "items": [
+        {
+          "codigo": "COMPROBANTE 022922",
+          "descripcion": "Pinturas / Insumos de pintura",
+          "cantidad": 1,
+          "total": 11400
+        }
+      ],
+      "monto": 11400,
+      "archivo": "/rendiciones/boletas/boleta_2026-08-21_pinturas_motta_11400.png",
+      "estado": "PAGADO",
+      "rendido": true,
+      "transferenciaId": "t-1",
+      "notas": "Parte del pago de .000 del 28/08/2026."
+    },
+    {
+      "id": "g-3",
+      "fecha": "2026-08-20",
+      "proveedor": "AliExpress",
+      "items": [
+        {
+          "tienda": "StarWing Store Store",
+          "ref": "8213986284482066",
+          "descripcion": "HQProp 8X3.7X3 3-Blade Polycarbonate Propeller 5mm Shaft",
+          "total": 6088
+        },
+        {
+          "tienda": "Flyhike Official Store",
+          "ref": "8213986284502066",
+          "descripcion": "2Pair Gemfan Vortex 8X4 Propeller Gray Glass Fiber Nylon",
+          "total": 8245
+        },
+        {
+          "tienda": "Shop1105024031 Store",
+          "ref": "8213986284522066",
+          "descripcion": "2 Pairs Gemfan 8040 8x4x3 3-Bladed 8-Inch Propellers (4 PCS-2CW-2CCW-8040)",
+          "total": 7548
+        }
+      ],
+      "monto": 21881,
+      "archivo": "/rendiciones/boletas/comprobante_2026-08-20_aliexpress_helices_21881.png",
+      "estado": "PAGADO",
+      "rendido": true,
+      "transferenciaId": "t-1",
+      "notas": "Compras hélices AliExpress (.088 + .245 + .548 = .881). Parte del pago de .000 del 28/08/2026."
+    },
+    {
+      "id": "g-4",
+      "fecha": "2026-08-22",
+      "proveedor": "AliExpress",
+      "items": [
+        {
+          "tienda": "stemedu Official Store",
+          "ref": "8213403442572066",
+          "descripcion": "Feetech STS3215 12V 30KG High Precision Feedback Servo (2 pcs)",
+          "total": 87582
+        },
+        {
+          "tienda": "Beautiful Beautiful bag Store",
+          "ref": "8213403442592066",
+          "descripcion": "ABQR DC 12V Waterproof IP54 Mini Linear Actuator 100 mm Stroke (2 pcs)",
+          "total": 37223
+        }
+      ],
+      "monto": 124805,
+      "archivo": "/rendiciones/boletas/comprobante_2026-08-22_aliexpress_servos_actuadores.png",
+      "estado": "PAGADO",
+      "rendido": true,
+      "transferenciaId": "t-1",
+      "notas": "Compras Servos 30KG (.582) y Actuadores lineales (.223). Parte del pago de .000 del 28/08/2026."
+    },
+    {
+      "id": "g-5",
+      "fecha": "2026-08-24",
+      "proveedor": "MercadoLibre",
+      "items": [
+        {
+          "codigo": "#175502767594",
+          "descripcion": "Pistola De Pintura De Aire H.v.l.p 1.0 (Naranja)",
+          "total": 14600
+        },
+        {
+          "codigo": "#175502767594",
+          "descripcion": "Regulador Presion De Aire Para Pistola",
+          "total": 13575
+        }
+      ],
+      "monto": 31165,
+      "archivo": "/rendiciones/boletas/comprobante_2026-08-24_mercadolibre_pistola_aire_31165.png",
+      "estado": "PENDIENTE_PAGO",
+      "rendido": false,
+      "transferenciaId": null,
+      "notas": "Pistola de pintura y regulador de presión. Falta que lo paguen."
+    },
+    {
+      "id": "g-6",
+      "fecha": "2026-08-27",
+      "proveedor": "MercadoLibre",
+      "items": [
+        {
+          "codigo": "#175828963476",
+          "descripcion": "Primer Automotriz Rust-oleum 2 En 1",
+          "total": 16140
+        },
+        {
+          "codigo": "#175828963476",
+          "descripcion": "Masilla Poliester Star Light Sherwin Williams",
+          "total": 8500
+        },
+        {
+          "codigo": "#175828963476",
+          "descripcion": "Espátulas Carroceras Hela 4 Pzas",
+          "total": 6780
+        }
+      ],
+      "monto": 38500,
+      "archivo": "/rendiciones/boletas/comprobante_2026-08-27_mercadolibre_masilla_primer_38500.png",
+      "estado": "PENDIENTE_PAGO",
+      "rendido": false,
+      "transferenciaId": null,
+      "notas": "Primer automotriz, masilla poliéster y espátulas carroceras. Falta que lo paguen."
+    },
+    {
+      "id": "g-7",
+      "fecha": "2026-08-28",
+      "hora": "13:35:22",
+      "proveedor": "Pinturas Motta SpA",
+      "rut": "76.638.967-8",
+      "direccion": "Calle Monjitas 359, Santiago",
+      "items": [
+        {
+          "codigo": "COMPROBANTE 023003",
+          "descripcion": "Pintura / Insumos",
+          "cantidad": 1,
+          "total": 32000
+        }
+      ],
+      "monto": 32000,
+      "archivo": "/rendiciones/boletas/boleta_2026-08-28_pinturas_motta_32000.png",
+      "estado": "PENDIENTE_PAGO",
+      "rendido": false,
+      "transferenciaId": null,
+      "notas": "Compra de pintura en Pinturas Motta (28/08 13:35 hrs). Falta que lo paguen."
+    },
+    {
+      "id": "g-8",
+      "fecha": "2026-08-24",
+      "proveedor": "Bencina / Traslado",
+      "items": [
+        {
+          "descripcion": "Combustible traslado en vehículo para transportar planchas de MDF",
+          "total": 10000
+        }
+      ],
+      "monto": 10000,
+      "archivo": null,
+      "estado": "PENDIENTE_PAGO",
+      "rendido": false,
+      "transferenciaId": null,
+      "notas": "Se fue en vehículo para poder llevar las planchas de MDF."
+    },
+    {
+      "id": "g-9",
+      "fecha": "2026-08-29",
+      "proveedor": "Bencina / Traslado",
+      "items": [
+        {
+          "descripcion": "Combustible traslado en vehículo para llevar dock y avanzar el fin de semana",
+          "total": 10000
+        }
+      ],
+      "monto": 10000,
+      "archivo": null,
+      "estado": "PENDIENTE_PAGO",
+      "rendido": false,
+      "transferenciaId": null,
+      "notas": "Se fue en vehículo para poder llevarse el dock para avanzar el fin de semana."
+    }
+  ],
+  "transferencias": [
+    {
+      "id": "t-1",
+      "fecha": "2026-08-28",
+      "hora": "17:58",
+      "emisor": "Skydrone SpA",
+      "rut": "76.991.046-8",
+      "monto": 220000,
+      "nOperacion": "6032572678",
+      "archivo": "/rendiciones/boletas/transferencia_2026-08-28_220000.png",
+      "montoAsignado": 241057,
+      "montoPorAsignar": -21057
+    }
+  ],
+  "totales": {
+    "totalGastado": 340841.0,
+    "totalReembolsado": 220000,
+    "saldoPendientePorCobrar": 121665.0
+  }
+}

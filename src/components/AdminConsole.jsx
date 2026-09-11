@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
-import { dbService } from '../services/db';
+import React, { useState, useEffect } from 'react';
+import { dbService, getProjectPhase } from '../services/db';
+import { TEAM_MEMBERS } from '../services/team';
 import { 
   Lock, Unlock, CheckCircle, ShoppingBag, Edit, RefreshCw, 
-  Trash2, DollarSign, UserCheck, AlertTriangle 
+  Trash2, DollarSign, UserCheck, AlertTriangle, Zap, Trophy,
+  KeyRound, RotateCcw, ShieldCheck, UserCog, Sparkles
 } from 'lucide-react';
 
 export default function AdminConsole({ 
@@ -16,21 +18,67 @@ export default function AdminConsole({
   const [pinError, setPinError] = useState('');
   const [editingProject, setEditingProject] = useState(null);
   const [budgetForm, setBudgetForm] = useState({ budget: '', leader_name: '', leader_email: '', status: 'Por iniciar', due_date: '' });
+  const [userPasswords, setUserPasswords] = useState({});
+
+  const refreshPasswordStatus = () => {
+    setUserPasswords(dbService.getAllUsersPasswordStatus());
+  };
+
+  useEffect(() => {
+    if (isAdmin) {
+      refreshPasswordStatus();
+    }
+  }, [isAdmin]);
 
   // --- CONTROL DE ACCESO ---
-  const handlePinSubmit = (e) => {
+  const handlePinSubmit = async (e) => {
     e.preventDefault();
-    if (dbService.verifyAdminPin(pinInput)) {
+    const isValid = await dbService.verifyAdminCredentials(pinInput);
+    if (isValid) {
       setIsAdmin(true);
       setPinError('');
       setPinInput('');
     } else {
-      setPinError('PIN incorrecto. Por favor, intenta de nuevo.');
+      setPinError('Contraseña o PIN incorrecto. Por favor, intenta de nuevo.');
     }
   };
 
   const handleLogout = () => {
     setIsAdmin(false);
+  };
+
+  // --- GESTIÓN DE CONTRASEÑAS DE USUARIOS ---
+  const handleResetPassword = async (member) => {
+    const isSelf = member.id === 'mateo';
+    const message = isSelf
+      ? '¿Seguro que deseas restablecer tu propia contraseña de Administrador (Mateo)? Quedarás sin contraseña y en tu próximo ingreso se te solicitará crear una nueva clave.'
+      : `¿Seguro que deseas restablecer y dejar sin contraseña a ${member.name}? La próxima vez que ingrese a la plataforma se le solicitará crear su contraseña por primera vez.`;
+
+    if (window.confirm(message)) {
+      try {
+        await dbService.removeUserPassword(member.id);
+        refreshPasswordStatus();
+        alert(`Se ha restablecido la contraseña de ${member.name}. Ahora está en estado "Sin Contraseña".`);
+      } catch (err) {
+        alert('Error al restablecer contraseña: ' + (err.message || err));
+      }
+    }
+  };
+
+  const handleSetPasswordManual = async (member) => {
+    const newPass = window.prompt(`Ingresa una nueva contraseña para ${member.name} (mínimo 4 caracteres):`);
+    if (newPass === null) return;
+    if (newPass.trim().length < 4) {
+      alert('La contraseña debe tener al menos 4 caracteres.');
+      return;
+    }
+    try {
+      await dbService.setUserPassword(member.id, newPass.trim());
+      refreshPasswordStatus();
+      alert(`Contraseña asignada exitosamente para ${member.name}.`);
+    } catch (err) {
+      alert('Error al asignar contraseña: ' + (err.message || err));
+    }
   };
 
   // --- ACCIONES DE ADMINISTRACIÓN DE MATERIALES ---
@@ -320,55 +368,280 @@ export default function AdminConsole({
 
         {/* 3. CONTROL DE PRESUPUESTOS Y LÍDERES DE PROYECTOS */}
         <div>
-          <h3 style={{ fontSize: '1.15rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <h3 style={{ fontSize: '1.15rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <DollarSign size={18} style={{ color: 'var(--accent-secondary)' }} /> Gestión de Presupuestos y Liderazgo de Proyectos
           </h3>
-          
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
-            {projects.map(proj => {
-              const projectMaterials = materials.filter(m => m.project_id === proj.id);
-              const approved = projectMaterials
-                .filter(m => m.status === 'approved' || m.status === 'purchased')
-                .reduce((sum, m) => sum + (Number(m.unit_price) * Number(m.quantity)), 0);
-              const spent = projectMaterials
-                .filter(m => (m.status === 'approved' || m.status === 'purchased') && (m.purchase_status === 'pedido' || m.purchase_status === 'disponible'))
-                .reduce((sum, m) => sum + (Number(m.unit_price) * Number(m.quantity)), 0);
 
-              return (
-                <div className="card" key={proj.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  <h4 style={{ fontSize: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
-                    {proj.name.split(':')[0]}
-                  </h4>
-                  <div style={{ fontSize: '0.85rem' }}>
-                    <p style={{ color: 'var(--text-secondary)' }}>
-                      <strong>Líder:</strong> {proj.leader_name || 'Sin asignar'}
-                    </p>
-                    <p style={{ color: 'var(--text-secondary)' }}>
-                      <strong>Email:</strong> {proj.leader_email || 'Sin asignar'}
-                    </p>
-                    <p style={{ color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-                      <strong>Presupuesto total:</strong> CLP {Number(proj.budget).toLocaleString('en-US')}
-                    </p>
-                    <p style={{ color: 'var(--text-secondary)' }}>
-                      <strong>Total Aprobado:</strong> CLP {approved.toLocaleString('en-US')}
-                    </p>
-                    <p style={{ color: spent > Number(proj.budget) ? 'var(--state-danger)' : 'var(--state-approved)', fontWeight: 600 }}>
-                      <strong>Total Gastado:</strong> CLP {spent.toLocaleString('en-US')}
-                    </p>
-                    <p style={{ color: 'var(--text-secondary)' }}>
-                      <strong>Disponible:</strong> CLP {(Number(proj.budget) - spent).toLocaleString('en-US')}
-                    </p>
+          {/* Subsección: Etapa 2 (Proyectos Activos) */}
+          <div style={{ marginBottom: '2.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
+              <Zap size={16} style={{ color: 'var(--accent-primary)' }} />
+              <h4 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--accent-primary)' }}>
+                Proyectos Activos (Etapa 2 - Versiones 2 & Avión 3D)
+              </h4>
+            </div>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+              Asigna y modifica los nuevos presupuestos, plazos y líderes designados para el ciclo de desarrollo en curso.
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
+              {projects.filter(p => getProjectPhase(p) === 'etapa_2').map(proj => {
+                const projectMaterials = materials.filter(m => m.project_id === proj.id);
+                const approved = projectMaterials
+                  .filter(m => m.status === 'approved' || m.status === 'purchased')
+                  .reduce((sum, m) => sum + (Number(m.unit_price) * Number(m.quantity)), 0);
+                const spent = projectMaterials
+                  .filter(m => (m.status === 'approved' || m.status === 'purchased') && (m.purchase_status === 'pedido' || m.purchase_status === 'disponible'))
+                  .reduce((sum, m) => sum + (Number(m.unit_price) * Number(m.quantity)), 0);
+
+                return (
+                  <div className="card" key={proj.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', border: '1px solid rgba(14, 165, 233, 0.3)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+                      <h4 style={{ fontSize: '1rem', margin: 0, color: 'var(--accent-primary)', fontWeight: 700 }}>
+                        {proj.name}
+                      </h4>
+                      <span style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem', borderRadius: '4px', backgroundColor: 'rgba(14, 165, 233, 0.15)', color: 'var(--accent-primary)', fontWeight: 700 }}>
+                        En Curso
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.85rem' }}>
+                      <p style={{ color: 'var(--text-secondary)' }}>
+                        <strong>Líder:</strong> {proj.leader_name || 'Sin asignar'}
+                      </p>
+                      <p style={{ color: 'var(--text-secondary)' }}>
+                        <strong>Email:</strong> {proj.leader_email || 'Sin asignar'}
+                      </p>
+                      <p style={{ color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                        <strong>Presupuesto:</strong> {Number(proj.budget) === 0 ? <span style={{ color: '#eab308', fontWeight: 600 }}>CLP 0 (Por reasignar)</span> : `CLP ${Number(proj.budget).toLocaleString('en-US')}`}
+                      </p>
+                      <p style={{ color: 'var(--text-secondary)' }}>
+                        <strong>Total Aprobado:</strong> CLP {approved.toLocaleString('en-US')}
+                      </p>
+                      <p style={{ color: spent > Number(proj.budget) ? 'var(--state-danger)' : 'var(--state-approved)', fontWeight: 600 }}>
+                        <strong>Total Gastado:</strong> CLP {spent.toLocaleString('en-US')}
+                      </p>
+                      <p style={{ color: 'var(--text-secondary)' }}>
+                        <strong>Disponible:</strong> CLP {(Math.max(0, Number(proj.budget) - spent)).toLocaleString('en-US')}
+                      </p>
+                    </div>
+                    <button 
+                      onClick={() => startEditProject(proj)}
+                      className="btn btn-primary btn-sm"
+                      style={{ width: '100%', marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '0.25rem', justifyContent: 'center' }}
+                    >
+                      <Edit size={12} /> Modificar Líder / Presupuesto
+                    </button>
                   </div>
-                  <button 
-                    onClick={() => startEditProject(proj)}
-                    className="btn btn-secondary btn-sm"
-                    style={{ width: '100%', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem', justifyContent: 'center' }}
-                  >
-                    <Edit size={12} /> Modificar Líder / Presupuesto
-                  </button>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Subsección: Etapa 1 (Proyectos Entregados / Histórico) */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
+              <Trophy size={16} style={{ color: 'var(--state-approved)' }} />
+              <h4 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--state-approved)' }}>
+                Proyectos Entregados (Etapa 1 - Expo Seguridad)
+              </h4>
+            </div>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+              Balance histórico consolidado de los primeros prototipos presentados en Expo Seguridad.
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', opacity: 0.9 }}>
+              {projects.filter(p => getProjectPhase(p) === 'etapa_1').map(proj => {
+                const projectMaterials = materials.filter(m => m.project_id === proj.id);
+                const spent = projectMaterials
+                  .filter(m => (m.status === 'approved' || m.status === 'purchased') && (m.purchase_status === 'pedido' || m.purchase_status === 'disponible'))
+                  .reduce((sum, m) => sum + (Number(m.unit_price) * Number(m.quantity)), 0);
+
+                return (
+                  <div className="card" key={proj.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', backgroundColor: 'rgba(16, 185, 129, 0.03)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+                      <h4 style={{ fontSize: '0.95rem', margin: 0 }}>
+                        {proj.name}
+                      </h4>
+                      <span style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem', borderRadius: '4px', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: 'var(--state-approved)', fontWeight: 700 }}>
+                        ✓ Entregado
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.825rem' }}>
+                      <p style={{ color: 'var(--text-secondary)' }}>
+                        <strong>Líder:</strong> {proj.leader_name || 'Sin asignar'}
+                      </p>
+                      <p style={{ color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                        <strong>Presupuesto cerrado:</strong> CLP {Number(proj.budget).toLocaleString('en-US')}
+                      </p>
+                      <p style={{ color: 'var(--state-approved)', fontWeight: 600 }}>
+                        <strong>Total Gastado:</strong> CLP {spent.toLocaleString('en-US')}
+                      </p>
+                      <p style={{ color: 'var(--text-secondary)' }}>
+                        <strong>Remanente:</strong> CLP {(Number(proj.budget) - spent).toLocaleString('en-US')}
+                      </p>
+                    </div>
+                    <button 
+                      onClick={() => startEditProject(proj)}
+                      className="btn btn-secondary btn-sm"
+                      style={{ width: '100%', marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '0.25rem', justifyContent: 'center', fontSize: '0.75rem' }}
+                    >
+                      <Edit size={12} /> Ajustar Datos Históricos
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* 4. GESTIÓN DE ACCESOS Y CONTRASEÑAS DE USUARIOS */}
+        <div style={{ backgroundColor: 'rgba(15, 23, 42, 0.6)', border: '1px solid var(--border-color, #243049)', borderRadius: '14px', padding: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <div>
+              <h3 style={{ fontSize: '1.2rem', margin: '0 0 0.35rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-primary, #0ea5e9)' }}>
+                <KeyRound size={20} /> Gestión de Accesos y Contraseñas de Usuarios ({TEAM_MEMBERS.length})
+              </h3>
+              <p style={{ margin: 0, fontSize: '0.825rem', color: 'var(--text-secondary)' }}>
+                Como Administrador (Mateo), puedes supervisar qué usuarios tienen su contraseña configurada, asignarles una nueva o volver a dejarlos sin contraseña para que creen una nueva en su próximo ingreso.
+              </p>
+            </div>
+            <button 
+              onClick={refreshPasswordStatus} 
+              className="btn btn-secondary btn-sm"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+            >
+              <RefreshCw size={12} /> Actualizar Estado
+            </button>
+          </div>
+
+          <div className="table-container">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Usuario</th>
+                  <th>Rol / Organización</th>
+                  <th>Estado de Clave</th>
+                  <th style={{ textAlign: 'right' }}>Acciones de Administrador</th>
+                </tr>
+              </thead>
+              <tbody>
+                {TEAM_MEMBERS.map(member => {
+                  const hasPass = userPasswords[member.id]?.hasPassword || dbService.hasUserPassword(member.id);
+                  const isMateoUser = member.id === 'mateo';
+
+                  return (
+                    <tr key={member.id} style={{ backgroundColor: isMateoUser ? 'rgba(14, 165, 233, 0.05)' : 'transparent' }}>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                          <span style={{ fontSize: '1.3rem' }}>{member.avatar}</span>
+                          <div>
+                            <div style={{ fontWeight: 600, color: member.color || 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                              <span>{member.fullName || member.name}</span>
+                              {isMateoUser && (
+                                <span style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem', borderRadius: '8px', backgroundColor: 'rgba(14, 165, 233, 0.2)', color: 'var(--accent-primary)' }}>
+                                  Admin
+                                </span>
+                              )}
+                              {member.isPartner && (
+                                <span style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem', borderRadius: '8px', backgroundColor: 'rgba(2, 132, 199, 0.2)', color: '#38bdf8' }}>
+                                  Colaborador
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                              ID: <code>{member.id}</code> • {member.email}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td style={{ fontSize: '0.85rem' }}>
+                        <div>{member.role}</div>
+                        {member.company && (
+                          <div style={{ fontSize: '0.72rem', color: '#38bdf8', fontWeight: 600 }}>Empresa: {member.company}</div>
+                        )}
+                      </td>
+
+                      <td>
+                        {hasPass ? (
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            padding: '0.25rem 0.6rem',
+                            borderRadius: '12px',
+                            backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                            color: '#10b981',
+                            fontSize: '0.75rem',
+                            fontWeight: 600
+                          }}>
+                            <ShieldCheck size={13} /> Contraseña Configurada
+                          </span>
+                        ) : (
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            padding: '0.25rem 0.6rem',
+                            borderRadius: '12px',
+                            backgroundColor: 'rgba(234, 179, 8, 0.15)',
+                            color: '#eab308',
+                            fontSize: '0.75rem',
+                            fontWeight: 600
+                          }}>
+                            <AlertTriangle size={13} /> Sin Contraseña (Requiere crear)
+                          </span>
+                        )}
+                      </td>
+
+                      <td style={{ textAlign: 'right' }}>
+                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                          {hasPass ? (
+                            <button
+                              onClick={() => handleResetPassword(member)}
+                              className="btn btn-secondary btn-sm"
+                              style={{
+                                padding: '0.35rem 0.65rem',
+                                color: '#f97316',
+                                borderColor: 'rgba(249, 115, 22, 0.3)',
+                                fontSize: '0.75rem',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.3rem'
+                              }}
+                              title="Restablecer clave para que vuelva a pedir crear contraseña en su próximo ingreso"
+                            >
+                              <RotateCcw size={12} />
+                              <span>Dejar sin contraseña</span>
+                            </button>
+                          ) : (
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', fontStyle: 'italic' }}>
+                              Pedirá crear al ingresar
+                            </span>
+                          )}
+
+                          <button
+                            onClick={() => handleSetPasswordManual(member)}
+                            className="btn btn-secondary btn-sm"
+                            style={{
+                              padding: '0.35rem 0.65rem',
+                              fontSize: '0.75rem',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.3rem'
+                            }}
+                            title="Asignar o cambiar contraseña directamente como Administrador"
+                          >
+                            <KeyRound size={12} />
+                            <span>{hasPass ? 'Cambiar Clave' : 'Asignar Clave'}</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
 

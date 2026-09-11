@@ -613,4 +613,41 @@ VALUES (
     '{"0_0": {"value": "Ensayo 1: Fibra + WBPU", "confirmed": false}, "1_0": {"value": "Ensayo 2: Papel Japón", "confirmed": false}, "2_0": {"value": "Ensayo 3: Masilla de Microesferas", "confirmed": false}, "3_0": {"value": "Ensayo 4: Doculam", "confirmed": false}}'::jsonb
 ) ON CONFLICT (project_id) DO NOTHING;
 
+-- ====================================================================
+-- Estructura para Tabla de Credenciales y Contraseñas de Usuarios
+-- ====================================================================
+CREATE TABLE IF NOT EXISTS public.user_credentials (
+    user_id TEXT PRIMARY KEY,
+    password_hash TEXT NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Habilitar RLS en user_credentials
+ALTER TABLE public.user_credentials ENABLE ROW LEVEL SECURITY;
+
+-- Política de lectura y escritura para permitir acceso controlado
+CREATE POLICY "Allow anon read/write user_credentials" ON public.user_credentials
+    FOR ALL TO anon USING (true) WITH CHECK (true);
+
+-- ====================================================================
+-- Estructura para Tabla de Disponibilidad Semanal del Equipo
+-- ====================================================================
+CREATE TABLE IF NOT EXISTS public.team_availability (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    member_id TEXT NOT NULL,
+    semester TEXT NOT NULL DEFAULT '2026-2',
+    week_number INTEGER NOT NULL,
+    level TEXT NOT NULL CHECK (level IN ('very_high', 'high', 'medium', 'low', 'minimal', 'vacation')),
+    hours_available INTEGER DEFAULT 0,
+    notes TEXT,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    UNIQUE(member_id, semester, week_number)
+);
+
+-- Habilitar RLS en team_availability
+ALTER TABLE public.team_availability ENABLE ROW LEVEL SECURITY;
+
+-- Política de lectura y escritura para permitir sincronización de disponibilidad
+CREATE POLICY "Allow anon read/write team_availability" ON public.team_availability
+    FOR ALL TO anon USING (true) WITH CHECK (true);
 
