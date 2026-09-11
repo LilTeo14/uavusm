@@ -1,10 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { dbService, getProjectPhase } from '../services/db';
-import { TEAM_MEMBERS } from '../services/team';
+import { 
+  TEAM_MEMBERS, 
+  getAllTeamMembers, 
+  addTeamMember, 
+  updateTeamMember, 
+  deleteTeamMember 
+} from '../services/team';
 import { 
   Lock, Unlock, CheckCircle, ShoppingBag, Edit, RefreshCw, 
   Trash2, DollarSign, UserCheck, AlertTriangle, Zap, Trophy,
-  KeyRound, RotateCcw, ShieldCheck, UserCog, Sparkles
+  KeyRound, RotateCcw, ShieldCheck, UserCog, Sparkles, UserPlus,
+  Users, Mail, Award, X, Check, Eye
 } from 'lucide-react';
 
 export default function AdminConsole({ 
@@ -19,14 +26,32 @@ export default function AdminConsole({
   const [editingProject, setEditingProject] = useState(null);
   const [budgetForm, setBudgetForm] = useState({ budget: '', leader_name: '', leader_email: '', status: 'Por iniciar', due_date: '' });
   const [userPasswords, setUserPasswords] = useState({});
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'users'
+  const [teamList, setTeamList] = useState(() => getAllTeamMembers());
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [userFormData, setUserFormData] = useState({
+    id: '',
+    name: '',
+    fullName: '',
+    role: '',
+    email: '',
+    avatar: '👤',
+    color: '#0ea5e9'
+  });
+
+  const refreshTeamAndPasswords = () => {
+    setTeamList(getAllTeamMembers());
+    setUserPasswords(dbService.getAllUsersPasswordStatus());
+  };
 
   const refreshPasswordStatus = () => {
-    setUserPasswords(dbService.getAllUsersPasswordStatus());
+    refreshTeamAndPasswords();
   };
 
   useEffect(() => {
     if (isAdmin) {
-      refreshPasswordStatus();
+      refreshTeamAndPasswords();
     }
   }, [isAdmin]);
 
@@ -78,6 +103,84 @@ export default function AdminConsole({
       alert(`Contraseña asignada exitosamente para ${member.name}.`);
     } catch (err) {
       alert('Error al asignar contraseña: ' + (err.message || err));
+    }
+  };
+
+  // --- GESTIÓN DE PERFILES / USUARIOS (CRUD) ---
+  const handleOpenCreateUser = () => {
+    setEditingUser(null);
+    setUserFormData({
+      id: '',
+      name: '',
+      fullName: '',
+      role: '',
+      email: '',
+      avatar: '👤',
+      color: '#0ea5e9'
+    });
+    setIsUserModalOpen(true);
+  };
+
+  const handleOpenEditUser = (member) => {
+    setEditingUser(member);
+    setUserFormData({
+      id: member.id,
+      name: member.name || '',
+      fullName: member.fullName || member.name || '',
+      role: member.role || '',
+      email: member.email || '',
+      avatar: member.avatar || '👤',
+      color: member.color || '#0ea5e9'
+    });
+    setIsUserModalOpen(true);
+  };
+
+  const handleSaveUser = (e) => {
+    e.preventDefault();
+    if (!userFormData.name.trim()) {
+      alert('Por favor ingresa un nombre para el usuario.');
+      return;
+    }
+
+    try {
+      if (editingUser) {
+        // Actualizar usuario existente
+        updateTeamMember(editingUser.id, {
+          name: userFormData.name.trim(),
+          fullName: userFormData.fullName.trim() || userFormData.name.trim(),
+          role: userFormData.role.trim() || 'Colaborador',
+          email: userFormData.email.trim(),
+          avatar: userFormData.avatar.trim() || '👤',
+          color: userFormData.color
+        });
+        alert(`Usuario '${userFormData.name}' actualizado exitosamente.`);
+      } else {
+        // Crear nuevo usuario
+        addTeamMember(userFormData);
+        alert(`¡Nuevo usuario '${userFormData.name}' registrado exitosamente! Podrá crear su contraseña al ingresar.`);
+      }
+      setIsUserModalOpen(false);
+      refreshTeamAndPasswords();
+    } catch (err) {
+      alert(err.message || 'Error al guardar usuario');
+    }
+  };
+
+  const handleDeleteUser = async (member) => {
+    if (member.id === 'mateo') {
+      alert('No puedes eliminar al Administrador Principal (Mateo).');
+      return;
+    }
+
+    if (window.confirm(`¿Estás seguro de que deseas eliminar a ${member.name} del equipo?`)) {
+      try {
+        deleteTeamMember(member.id);
+        await dbService.removeUserPassword(member.id);
+        refreshTeamAndPasswords();
+        alert(`Usuario '${member.name}' eliminado.`);
+      } catch (err) {
+        alert(err.message || 'Error al eliminar usuario');
+      }
     }
   };
 
@@ -205,19 +308,63 @@ export default function AdminConsole({
   return (
     <div className="admin-console">
       {/* Encabezado Admin */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem' }}>
         <div>
           <h2 style={{ fontSize: '1.5rem', fontFamily: 'var(--font-display)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Unlock size={22} style={{ color: 'var(--state-approved)' }} /> Consola de Administración Desbloqueada
           </h2>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Tienes permisos de lectura y escritura sobre presupuestos, líderes y aprobaciones.</p>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Tienes permisos de lectura y escritura sobre usuarios, accesos, presupuestos, líderes y aprobaciones.</p>
         </div>
         <button onClick={handleLogout} className="btn btn-secondary btn-sm">
           Cerrar Sesión Admin
         </button>
       </div>
 
-      {/* Grid de Secciones */}
+      {/* Pestañas de Navegación de la Consola Admin */}
+      <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '2rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+        <button
+          onClick={() => setActiveTab('overview')}
+          className={`btn btn-sm ${activeTab === 'overview' ? 'btn-primary' : 'btn-secondary'}`}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.5rem 1rem' }}
+        >
+          <ShoppingBag size={15} />
+          <span>Materiales & Presupuestos</span>
+          {pendingMaterials.length > 0 && (
+            <span style={{ 
+              backgroundColor: '#ef4444', 
+              color: '#fff', 
+              fontSize: '0.65rem', 
+              padding: '0.1rem 0.45rem', 
+              borderRadius: '10px',
+              fontWeight: 700 
+            }}>
+              {pendingMaterials.length}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('users')}
+          className={`btn btn-sm ${activeTab === 'users' ? 'btn-primary' : 'btn-secondary'}`}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.5rem 1rem' }}
+        >
+          <Users size={15} />
+          <span>Administración de Usuarios</span>
+          <span style={{ 
+            backgroundColor: activeTab === 'users' ? 'rgba(255,255,255,0.25)' : 'rgba(14,165,233,0.15)', 
+            color: activeTab === 'users' ? '#fff' : 'var(--accent-primary)', 
+            fontSize: '0.65rem', 
+            padding: '0.1rem 0.45rem', 
+            borderRadius: '10px',
+            fontWeight: 700 
+          }}>
+            {teamList.length}
+          </span>
+        </button>
+      </div>
+
+      {/* VISTA 1: MATERIALES, COMPRAS Y PRESUPUESTOS */}
+      {activeTab === 'overview' && (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
         
         {/* 1. SOLICITUDES PENDIENTES */}
@@ -494,71 +641,160 @@ export default function AdminConsole({
           </div>
         </div>
 
-        {/* 4. GESTIÓN DE ACCESOS Y CONTRASEÑAS DE USUARIOS */}
-        <div style={{ backgroundColor: 'rgba(15, 23, 42, 0.6)', border: '1px solid var(--border-color, #243049)', borderRadius: '14px', padding: '1.5rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+      </div>
+      )}
+
+      {/* VISTA 2: ADMINISTRACIÓN COMPLETA DE USUARIOS */}
+      {activeTab === 'users' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          {/* Header de la Zona de Usuarios */}
+          <div style={{ 
+            backgroundColor: 'rgba(15, 23, 42, 0.6)', 
+            border: '1px solid var(--border-color, #243049)', 
+            borderRadius: '14px', 
+            padding: '1.5rem',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '1rem'
+          }}>
             <div>
-              <h3 style={{ fontSize: '1.2rem', margin: '0 0 0.35rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-primary, #0ea5e9)' }}>
-                <KeyRound size={20} /> Gestión de Accesos y Contraseñas de Usuarios ({TEAM_MEMBERS.length})
+              <h3 style={{ fontSize: '1.3rem', margin: '0 0 0.35rem 0', display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'var(--accent-primary, #0ea5e9)' }}>
+                <Users size={24} /> Directorio y Administración de Integrantes ({teamList.length})
               </h3>
-              <p style={{ margin: 0, fontSize: '0.825rem', color: 'var(--text-secondary)' }}>
-                Como Administrador (Mateo), puedes supervisar qué usuarios tienen su contraseña configurada, asignarles una nueva o volver a dejarlos sin contraseña para que creen una nueva en su próximo ingreso.
+              <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                Crea nuevos miembros para el equipo, edita sus datos de perfil (roles, correos, avatares), gestiona sus contraseñas o déjalos sin clave para que la activen al ingresar.
               </p>
             </div>
-            <button 
-              onClick={refreshPasswordStatus} 
-              className="btn btn-secondary btn-sm"
-              style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-            >
-              <RefreshCw size={12} /> Actualizar Estado
-            </button>
+
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+              <button 
+                onClick={refreshTeamAndPasswords} 
+                className="btn btn-secondary btn-sm"
+                style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                title="Actualizar directorio"
+              >
+                <RefreshCw size={14} /> Refrescar
+              </button>
+              <button 
+                onClick={handleOpenCreateUser} 
+                className="btn btn-primary btn-sm"
+                style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', padding: '0.5rem 1rem' }}
+              >
+                <UserPlus size={16} />
+                <span>Registrar Nuevo Usuario</span>
+              </button>
+            </div>
           </div>
 
-          <div className="table-container">
+          {/* Tarjetas de Resumen Rápido */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+            <div className="card" style={{ padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '10px', backgroundColor: 'rgba(14, 165, 233, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0ea5e9' }}>
+                <Users size={22} />
+              </div>
+              <div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 800 }}>{teamList.length}</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Integrantes Totales</div>
+              </div>
+            </div>
+
+            <div className="card" style={{ padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '10px', backgroundColor: 'rgba(16, 185, 129, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10b981' }}>
+                <ShieldCheck size={22} />
+              </div>
+              <div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 800 }}>
+                  {teamList.filter(m => userPasswords[m.id]?.hasPassword || dbService.hasUserPassword(m.id)).length}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Con Contraseña Activa</div>
+              </div>
+            </div>
+
+            <div className="card" style={{ padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '10px', backgroundColor: 'rgba(234, 179, 8, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#eab308' }}>
+                <KeyRound size={22} />
+              </div>
+              <div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 800 }}>
+                  {teamList.filter(m => !(userPasswords[m.id]?.hasPassword || dbService.hasUserPassword(m.id))).length}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Por Activar Contraseña</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Tabla Completa de Administración de Usuarios */}
+          <div className="table-container" style={{ border: '1px solid var(--border-color)', borderRadius: '12px' }}>
             <table className="data-table">
               <thead>
                 <tr>
                   <th>Usuario</th>
-                  <th>Rol / Organización</th>
+                  <th>Rol en el Equipo</th>
+                  <th>Correo Institucional</th>
                   <th>Estado de Clave</th>
-                  <th style={{ textAlign: 'right' }}>Acciones de Administrador</th>
+                  <th style={{ textAlign: 'right' }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {TEAM_MEMBERS.map(member => {
+                {teamList.map(member => {
                   const hasPass = userPasswords[member.id]?.hasPassword || dbService.hasUserPassword(member.id);
                   const isMateoUser = member.id === 'mateo';
 
                   return (
-                    <tr key={member.id} style={{ backgroundColor: isMateoUser ? 'rgba(14, 165, 233, 0.05)' : 'transparent' }}>
+                    <tr key={member.id} style={{ backgroundColor: isMateoUser ? 'rgba(14, 165, 233, 0.04)' : 'transparent' }}>
                       <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                          <span style={{ fontSize: '1.3rem' }}>{member.avatar}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <span style={{ 
+                            fontSize: '1.35rem',
+                            width: '38px',
+                            height: '38px',
+                            borderRadius: '10px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: member.bgBadge || 'rgba(255,255,255,0.06)',
+                            border: `1px solid ${member.borderBadge || 'rgba(255,255,255,0.1)'}`
+                          }}>
+                            {member.avatar}
+                          </span>
                           <div>
-                            <div style={{ fontWeight: 600, color: member.color || 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <div style={{ fontWeight: 700, color: member.color || 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                               <span>{member.fullName || member.name}</span>
                               {isMateoUser && (
-                                <span style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem', borderRadius: '8px', backgroundColor: 'rgba(14, 165, 233, 0.2)', color: 'var(--accent-primary)' }}>
-                                  Admin
+                                <span style={{ fontSize: '0.65rem', padding: '0.1rem 0.45rem', borderRadius: '8px', backgroundColor: 'rgba(14, 165, 233, 0.2)', color: 'var(--accent-primary)', fontWeight: 800 }}>
+                                  Líder General
                                 </span>
                               )}
-                              {member.isPartner && (
-                                <span style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem', borderRadius: '8px', backgroundColor: 'rgba(2, 132, 199, 0.2)', color: '#38bdf8' }}>
-                                  Colaborador
+                              {member.isCustom && (
+                                <span style={{ fontSize: '0.65rem', padding: '0.1rem 0.45rem', borderRadius: '8px', backgroundColor: 'rgba(168, 85, 247, 0.2)', color: '#c084fc', fontWeight: 600 }}>
+                                  Nuevo
                                 </span>
                               )}
                             </div>
                             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                              ID: <code>{member.id}</code> • {member.email}
+                              ID: <code>{member.id}</code>
                             </div>
                           </div>
                         </div>
                       </td>
 
                       <td style={{ fontSize: '0.85rem' }}>
-                        <div>{member.role}</div>
+                        <div style={{ fontWeight: 600 }}>{member.role}</div>
                         {member.company && (
                           <div style={{ fontSize: '0.72rem', color: '#38bdf8', fontWeight: 600 }}>Empresa: {member.company}</div>
+                        )}
+                      </td>
+
+                      <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                        {member.email ? (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                            <Mail size={13} style={{ color: 'var(--text-muted)' }} />
+                            <span>{member.email}</span>
+                          </span>
+                        ) : (
+                          <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Sin correo</span>
                         )}
                       </td>
 
@@ -568,73 +804,83 @@ export default function AdminConsole({
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '0.35rem',
-                            padding: '0.25rem 0.6rem',
+                            padding: '0.25rem 0.65rem',
                             borderRadius: '12px',
                             backgroundColor: 'rgba(16, 185, 129, 0.15)',
                             color: '#10b981',
                             fontSize: '0.75rem',
                             fontWeight: 600
                           }}>
-                            <ShieldCheck size={13} /> Contraseña Configurada
+                            <ShieldCheck size={13} /> Activa
                           </span>
                         ) : (
                           <span style={{
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '0.35rem',
-                            padding: '0.25rem 0.6rem',
+                            padding: '0.25rem 0.65rem',
                             borderRadius: '12px',
                             backgroundColor: 'rgba(234, 179, 8, 0.15)',
                             color: '#eab308',
                             fontSize: '0.75rem',
                             fontWeight: 600
                           }}>
-                            <AlertTriangle size={13} /> Sin Contraseña (Requiere crear)
+                            <AlertTriangle size={13} /> Sin contraseña
                           </span>
                         )}
                       </td>
 
                       <td style={{ textAlign: 'right' }}>
-                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                          {hasPass ? (
+                        <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                          <button
+                            onClick={() => handleOpenEditUser(member)}
+                            className="btn btn-secondary btn-sm"
+                            style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                            title="Editar datos del usuario"
+                          >
+                            <Edit size={12} />
+                            <span>Editar</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleSetPasswordManual(member)}
+                            className="btn btn-secondary btn-sm"
+                            style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                            title="Asignar contraseña manualmente"
+                          >
+                            <KeyRound size={12} />
+                            <span>{hasPass ? 'Clave' : 'Asignar'}</span>
+                          </button>
+
+                          {hasPass && (
                             <button
                               onClick={() => handleResetPassword(member)}
                               className="btn btn-secondary btn-sm"
                               style={{
-                                padding: '0.35rem 0.65rem',
+                                padding: '0.3rem 0.6rem',
                                 color: '#f97316',
                                 borderColor: 'rgba(249, 115, 22, 0.3)',
                                 fontSize: '0.75rem',
                                 display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: '0.3rem'
+                                gap: '0.25rem'
                               }}
-                              title="Restablecer clave para que vuelva a pedir crear contraseña en su próximo ingreso"
+                              title="Dejar sin contraseña para que cree una al ingresar"
                             >
                               <RotateCcw size={12} />
-                              <span>Dejar sin contraseña</span>
                             </button>
-                          ) : (
-                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', fontStyle: 'italic' }}>
-                              Pedirá crear al ingresar
-                            </span>
                           )}
 
-                          <button
-                            onClick={() => handleSetPasswordManual(member)}
-                            className="btn btn-secondary btn-sm"
-                            style={{
-                              padding: '0.35rem 0.65rem',
-                              fontSize: '0.75rem',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.3rem'
-                            }}
-                            title="Asignar o cambiar contraseña directamente como Administrador"
-                          >
-                            <KeyRound size={12} />
-                            <span>{hasPass ? 'Cambiar Clave' : 'Asignar Clave'}</span>
-                          </button>
+                          {!isMateoUser && (
+                            <button
+                              onClick={() => handleDeleteUser(member)}
+                              className="btn btn-danger btn-sm btn-icon"
+                              style={{ padding: '0.3rem 0.5rem' }}
+                              title="Eliminar usuario"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -644,8 +890,118 @@ export default function AdminConsole({
             </table>
           </div>
         </div>
+      )}
 
-      </div>
+      {/* ====================================================================
+         MODAL: REGISTRAR O EDITAR INTEGRANTE DEL EQUIPO
+         ==================================================================== */}
+      {isUserModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '520px' }}>
+            <div className="modal-header">
+              <h3 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <UserCog size={18} style={{ color: 'var(--accent-primary)' }} />
+                <span>{editingUser ? `Editar Integrante: ${editingUser.name}` : 'Registrar Nuevo Integrante'}</span>
+              </h3>
+              <button className="modal-close-btn" onClick={() => setIsUserModalOpen(false)}>×</button>
+            </div>
+
+            <form onSubmit={handleSaveUser}>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div className="form-group">
+                    <label>Nombre Corto / Alias *</label>
+                    <input 
+                      type="text" 
+                      className="form-input" 
+                      placeholder="Ej: Carlos"
+                      value={userFormData.name}
+                      onChange={e => setUserFormData({ ...userFormData, name: e.target.value })}
+                      required 
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Nombre Completo</label>
+                    <input 
+                      type="text" 
+                      className="form-input" 
+                      placeholder="Ej: Carlos Pérez"
+                      value={userFormData.fullName}
+                      onChange={e => setUserFormData({ ...userFormData, fullName: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Rol o Responsabilidad en UAVUSM *</label>
+                  <input 
+                    type="text" 
+                    className="form-input" 
+                    placeholder="Ej: Electrónica, Telemetría & Sensores"
+                    value={userFormData.role}
+                    onChange={e => setUserFormData({ ...userFormData, role: e.target.value })}
+                    required 
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Correo Electrónico (opcional)</label>
+                  <input 
+                    type="email" 
+                    className="form-input" 
+                    placeholder="carlos@usm.cl"
+                    value={userFormData.email}
+                    onChange={e => setUserFormData({ ...userFormData, email: e.target.value })}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div className="form-group">
+                    <label>Avatar / Emoji</label>
+                    <input 
+                      type="text" 
+                      className="form-input" 
+                      placeholder="Ej: 👨‍🔧 o ⚡"
+                      value={userFormData.avatar}
+                      onChange={e => setUserFormData({ ...userFormData, avatar: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Color Distintivo</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.2rem' }}>
+                      <input 
+                        type="color" 
+                        value={userFormData.color}
+                        onChange={e => setUserFormData({ ...userFormData, color: e.target.value })}
+                        style={{ width: '40px', height: '36px', border: 'none', borderRadius: '6px', cursor: 'pointer', background: 'transparent' }}
+                      />
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{userFormData.color}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {!editingUser && (
+                  <div style={{ padding: '0.75rem', borderRadius: '8px', backgroundColor: 'rgba(14,165,233,0.08)', border: '1px solid rgba(14,165,233,0.2)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                    💡 Al crear este usuario, podrá seleccionarse en el menú de perfiles superior y el sistema le pedirá crear su contraseña personal la primera vez que intente ingresar.
+                  </div>
+                )}
+              </div>
+
+              <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', padding: '1rem 1.5rem', borderTop: '1px solid var(--border-color)' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setIsUserModalOpen(false)}>
+                  Cancelar
+                </button>
+                <button type="submit" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Check size={14} />
+                  <span>{editingUser ? 'Guardar Cambios' : 'Crear Integrante'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* ====================================================================
          MODAL: EDICIÓN DE PROYECTO (PRESUPUESTO Y LÍDER)
