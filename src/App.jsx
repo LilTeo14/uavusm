@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Folder, ShieldAlert, Wifi, WifiOff, 
   Menu, X, RefreshCw, HelpCircle, Image, CheckCircle2,
   Sparkles, Shield, Calendar, GitBranch, LayoutGrid, Wallet,
-  CalendarRange, Receipt
+  CalendarRange, Receipt, ChevronDown, ChevronRight
 } from 'lucide-react';
 import { dbService, supabase } from './services/db';
 import { getTeamMember } from './services/team';
@@ -23,6 +23,7 @@ export default function App() {
   // Navigation State
   const [activeView, setActiveView] = useState('overview'); // 'overview' | 'project' | 'admin'
   const [selectedProjectId, setSelectedProjectId] = useState(null);
+  const [isEtapa1Expanded, setIsEtapa1Expanded] = useState(false);
   
   // About Us Modal State
   const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
@@ -321,7 +322,7 @@ export default function App() {
           rel="noopener noreferrer"
           className="btn btn-secondary btn-sm" 
           style={{ 
-            marginBottom: '1.75rem', 
+            marginBottom: '1rem', 
             width: '100%', 
             display: 'flex', 
             alignItems: 'center', 
@@ -342,102 +343,113 @@ export default function App() {
         </a>
 
         <nav className="sidebar-menu">
-          <span className="sidebar-heading">Iniciativa</span>
-          <div 
-            className={`menu-item ${activeView === 'overview' ? 'active' : ''}`}
-            onClick={() => handleNavigate('overview')}
-            title="Árbol de desarrollo y radar de avance"
-          >
-            <GitBranch size={18} />
-            <span>Resumen General</span>
-          </div>
-
-          <div 
-            className={`menu-item ${activeView === 'projects_overview' ? 'active' : ''}`}
-            onClick={() => handleNavigate('projects_overview')}
-            title="Tablero general de proyectos, presupuestos y gráficos financieros"
-          >
-            <LayoutGrid size={18} />
-            <span>Proyectos & Fondos</span>
-          </div>
-
-          <div 
-            className={`menu-item ${activeView === 'availability' ? 'active' : ''}`}
-            onClick={() => handleNavigate('availability')}
-            title="Disponibilidad semanal del equipo y calendario académico USM"
-          >
-            <CalendarRange size={18} />
-            <span>Disponibilidad Equipo</span>
-          </div>
-
-          {currentProfile === 'mateo' && isAdmin && (
+          <div className="sidebar-scrollable-content">
+            <span className="sidebar-heading">Iniciativa</span>
             <div 
-              className={`menu-item ${activeView === 'mateo' ? 'active' : ''}`}
-              onClick={() => handleNavigate('mateo')}
-              style={{ color: 'var(--accent-primary)', fontWeight: 600 }}
+              className={`menu-item ${activeView === 'overview' ? 'active' : ''}`}
+              onClick={() => handleNavigate('overview')}
+              title="Árbol de desarrollo y radar de avance"
             >
-              <Sparkles size={18} />
-              <span>Espacio de Mateo</span>
+              <GitBranch size={18} />
+              <span>Resumen General</span>
             </div>
-          )}
 
-          {(currentProfile === 'mateo' || currentProfile === 'nicolas' || authenticatedUser === 'mateo' || authenticatedUser === 'nicolas' || isAdmin) && (
             <div 
-              className={`menu-item ${activeView === 'rendiciones' ? 'active' : ''}`}
-              onClick={() => handleNavigate('rendiciones')}
-              style={{ color: '#38bdf8' }}
-              title="Control de boletas, rendiciones y conciliación con Skydrone SpA (Mateo & Nicolás)"
+              className={`menu-item ${activeView === 'projects_overview' ? 'active' : ''}`}
+              onClick={() => handleNavigate('projects_overview')}
+              title="Tablero general de proyectos, presupuestos y gráficos financieros"
             >
-              <Receipt size={18} />
-              <span>Rendiciones</span>
+              <LayoutGrid size={18} />
+              <span>Proyectos & Fondos</span>
             </div>
-          )}
 
-          {isAdmin && (
             <div 
-              className={`menu-item ${activeView === 'admin' ? 'active' : ''}`}
-              onClick={() => handleNavigate('admin')}
+              className={`menu-item ${activeView === 'availability' ? 'active' : ''}`}
+              onClick={() => handleNavigate('availability')}
+              title="Disponibilidad semanal del equipo y calendario académico USM"
             >
-              <Shield size={18} />
-              <span>Consola Admin</span>
+              <CalendarRange size={18} />
+              <span>Disponibilidad Equipo</span>
             </div>
-          )}
 
-          <span className="sidebar-heading">Proyectos Activos (Etapa 2)</span>
-          {projects.filter(p => p.status !== 'Completado').map(p => {
-            const shortName = p.name.split(':')[0];
-            return (
+            {currentProfile === 'mateo' && isAdmin && (
               <div 
-                key={p.id}
-                className={`menu-item ${activeView === 'project' && selectedProjectId === p.id ? 'active' : ''}`}
-                onClick={() => handleSelectProject(p.id)}
+                className={`menu-item ${activeView === 'mateo' ? 'active' : ''}`}
+                onClick={() => handleNavigate('mateo')}
+                style={{ color: 'var(--accent-primary)', fontWeight: 600 }}
               >
-                <Folder size={18} />
-                <span>{shortName}</span>
+                <Sparkles size={18} />
+                <span>Espacio de Mateo</span>
               </div>
-            );
-          })}
+            )}
 
-          {projects.some(p => p.status === 'Completado') && (
-            <>
-              <span className="sidebar-heading" style={{ marginTop: '1.25rem' }}>Etapa 1 (Expo Seguridad)</span>
-              {projects.filter(p => p.status === 'Completado').map(p => {
-                const shortName = p.name.split(':')[0];
-                return (
-                  <div 
-                    key={p.id}
-                    className={`menu-item ${activeView === 'project' && selectedProjectId === p.id ? 'active' : ''}`}
-                    onClick={() => handleSelectProject(p.id)}
-                    style={{ opacity: 0.8 }}
-                    title="Proyecto culminado y presentado en Expo Seguridad"
-                  >
-                    <CheckCircle2 size={16} style={{ color: 'var(--state-approved)', flexShrink: 0 }} />
-                    <span>{shortName}</span>
-                  </div>
-                );
-              })}
-            </>
-          )}
+            {(currentProfile === 'mateo' || currentProfile === 'nicolas' || authenticatedUser === 'mateo' || authenticatedUser === 'nicolas' || isAdmin) && (
+              <div 
+                className={`menu-item ${activeView === 'rendiciones' ? 'active' : ''}`}
+                onClick={() => handleNavigate('rendiciones')}
+                style={{ color: '#38bdf8' }}
+                title="Control de boletas, rendiciones y conciliación con Skydrone SpA (Mateo & Nicolás)"
+              >
+                <Receipt size={18} />
+                <span>Rendiciones</span>
+              </div>
+            )}
+
+            {isAdmin && (
+              <div 
+                className={`menu-item ${activeView === 'admin' ? 'active' : ''}`}
+                onClick={() => handleNavigate('admin')}
+              >
+                <Shield size={18} />
+                <span>Consola Admin</span>
+              </div>
+            )}
+
+            <span className="sidebar-heading" style={{ marginTop: '1.25rem' }}>Proyectos Activos (Etapa 2)</span>
+            {projects.filter(p => p.status !== 'Completado').map(p => {
+              const shortName = p.name.split(':')[0];
+              return (
+                <div 
+                  key={p.id}
+                  className={`menu-item ${activeView === 'project' && selectedProjectId === p.id ? 'active' : ''}`}
+                  onClick={() => handleSelectProject(p.id)}
+                >
+                  <Folder size={18} />
+                  <span>{shortName}</span>
+                </div>
+              );
+            })}
+
+            {projects.some(p => p.status === 'Completado') && (
+              <div className="sidebar-collapsible-group">
+                <div 
+                  className="sidebar-heading sidebar-heading-collapsible" 
+                  onClick={() => setIsEtapa1Expanded(prev => !prev)}
+                  title={isEtapa1Expanded ? "Click para contraer Etapa 1" : "Click para expandir Etapa 1"}
+                >
+                  <span>Etapa 1 (Expo Seguridad)</span>
+                  <span className="collapsible-icon-box">
+                    {isEtapa1Expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                  </span>
+                </div>
+                {isEtapa1Expanded && projects.filter(p => p.status === 'Completado').map(p => {
+                  const shortName = p.name.split(':')[0];
+                  return (
+                    <div 
+                      key={p.id}
+                      className={`menu-item ${activeView === 'project' && selectedProjectId === p.id ? 'active' : ''}`}
+                      onClick={() => handleSelectProject(p.id)}
+                      style={{ opacity: 0.85 }}
+                      title="Proyecto culminado y presentado en Expo Seguridad"
+                    >
+                      <CheckCircle2 size={16} style={{ color: 'var(--state-approved)', flexShrink: 0 }} />
+                      <span>{shortName}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </nav>
 
         {/* Sidebar Footer / Connection Status */}
